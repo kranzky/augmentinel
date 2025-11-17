@@ -7,3 +7,4 @@ desktop.ini
 *.vcxproj.user
 /temp/
 /Releases
+.claude
