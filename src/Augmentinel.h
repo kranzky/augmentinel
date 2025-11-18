@@ -18,7 +18,9 @@ public:
 	void Render(IScene* pScene) final override;
 	void Frame(float elapsed_seconds) final override;
 
+#ifdef PLATFORM_WINDOWS
 	static void Options(HINSTANCE hinst, HWND hwndParent);
+#endif
 
 protected:
 	void PlayTune(const std::wstring& filename);

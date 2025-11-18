@@ -1,381 +1,207 @@
-#include "stdafx.h"
-#include "resource.h"
+#include "Platform.h"
 #include "Application.h"
+#include "OpenGLRenderer.h"
 #include "Augmentinel.h"
-#include "FlatView.h"
-#include "VRView.h"
 #include "Settings.h"
 
-// Initial window size, aspect corrected.
-static constexpr auto WINDOW_WIDTH = 1600;
-static constexpr auto WINDOW_HEIGHT = WINDOW_WIDTH * 9 / 16;
-static constexpr auto WINDOW_CAPTION = TEXT(APP_NAME) TEXT(" ") TEXT(APP_VERSION);
+static constexpr float MAX_ACCUMULATED_TIME = 0.25f;
 
-static constexpr auto MAX_ACCUMULATED_TIME = 0.25f;
-
-static constexpr auto WINDOW_POS_KEY = L"WindowPos";
-
-/*static*/ Application* Application::s_pApp;
-
-Application::Application(HINSTANCE hinst)
-	: m_hinst(hinst)
-{
+Application::Application() {
 }
 
-bool Application::Init()
-{
-	auto hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
-	if (FAILED(hr))
-		return false;
-
-	INITCOMMONCONTROLSEX icce{ sizeof(icce), ICC_BAR_CLASSES };
-	InitCommonControlsEx(&icce);
-
-	InitSettings(APP_NAME);
-	ProcessCommandLine();
-
-	if (!InitializeWindow(WINDOW_WIDTH, WINDOW_HEIGHT))
-		throw std::exception("failed to create window");
-
-	if (m_viewMode == ViewMode::Unspecified)
-	{
-		auto ret = DialogBox(m_hinst, MAKEINTRESOURCE(IDD_LAUNCHER), NULL, StaticDialogProc);
-		switch (ret)
-		{
-		case IDB_PLAY:
-			m_viewMode = ViewMode::Flat;
-			break;
-		case IDB_PLAY_VR:
-			m_viewMode = ViewMode::VR;
-			break;
-		default:
-			return false;
-		}
-	}
-
-	if (m_viewMode != ViewMode::VR)
-		m_pView = make_shared_aligned<FlatView>(m_hwnd);
-	else
-	{
-		if (OpenVR::IsAvailable())
-			m_pView = make_shared_aligned<VRView>(m_hwnd);
-		else
-			throw std::exception("OpenVR-compatible headset not found.");
-	}
-
-	auto hrtf_enabled = GetFlag(HRTF_ENABLED_KEY, DEFAULT_HRTF_ENABLED);
-	if (hrtf_enabled)
-	{
-		// Load the hook DLL that adds HRTF support to X3D applications.
-		LoadLibrary(X3D_HRTF_HOOK_DLL);
-	}
-
-	m_pAudio = std::make_shared<Audio>();
-	m_pGame = std::make_unique<Augmentinel>(m_pView, m_pAudio);
-
-	ShowWindow(m_hwnd, m_maximised ? SW_SHOWMAXIMIZED : SW_SHOW);
-
-	if (m_viewMode == ViewMode::VR)
-		ActivateWindow(true);
-
-	return true;
+Application::~Application() {
+    Shutdown();
 }
 
-void Application::Run()
-{
-	auto tLastFrame = std::chrono::high_resolution_clock::now();
+bool Application::Init() {
+    // Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0) {
+        SDL_Log("SDL initialization failed: %s", SDL_GetError());
+        return false;
+    }
 
-	MSG msg{};
-	while (msg.message != WM_QUIT)
-	{
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+    // Request OpenGL 3.3 Core Profile
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-			if (msg.message == WM_QUIT)
-				break;
-		}
+    // MSAA
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-		auto tNow = std::chrono::high_resolution_clock::now();
-		auto elapsed_seconds = std::chrono::duration<float, std::chrono::seconds::period>(tNow - tLastFrame).count();
-		elapsed_seconds = std::min(elapsed_seconds, MAX_ACCUMULATED_TIME);	// limit accumulated time
-		tLastFrame = tNow;
+    // Create window
+    m_window = SDL_CreateWindow(
+        APP_NAME " " APP_VERSION,
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        m_windowWidth,
+        m_windowHeight,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+    );
 
-		m_pGame->Frame(elapsed_seconds);
-		m_pView->BeginScene();
-		m_pView->Render(m_pGame.get());
-		m_pView->EndScene();
-	}
+    if (!m_window) {
+        SDL_Log("Window creation failed: %s", SDL_GetError());
+        return false;
+    }
 
-	DestroyWindow(m_hwnd);
-	m_hwnd = NULL;
+    // Create OpenGL context
+    m_glContext = SDL_GL_CreateContext(m_window);
+    if (!m_glContext) {
+        SDL_Log("OpenGL context creation failed: %s", SDL_GetError());
+        return false;
+    }
+
+    // Enable VSync
+    SDL_GL_SetSwapInterval(1);
+
+    // Log OpenGL info
+    SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
+    SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
+    SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
+
+    // Initialize settings
+    InitSettings(APP_NAME);
+
+    // Create renderer
+    auto pOpenGLRenderer = std::make_shared<OpenGLRenderer>(m_windowWidth, m_windowHeight);
+    if (!pOpenGLRenderer->Init()) {
+        SDL_Log("Renderer initialization failed");
+        return false;
+    }
+    m_pRenderer = pOpenGLRenderer;
+
+    // Create audio
+    m_pAudio = std::make_shared<Audio>();
+
+    // Create game
+    m_pGame = std::make_unique<Augmentinel>(m_pRenderer, m_pAudio);
+
+    // Enable relative mouse mode for free look
+    SDL_SetRelativeMouseMode(SDL_TRUE);
+
+    SDL_Log("Application initialized successfully");
+    return true;
 }
 
-void Application::ProcessCommandLine()
-{
-	for (int arg = 1; arg < __argc; ++arg)
-	{
-		if (!lstrcmpiA(__argv[arg], "--vr") || !lstrcmpiA(__argv[arg], "--openvr"))
-			m_viewMode = ViewMode::VR;
-		else if (!lstrcmpiA(__argv[arg], "--flat") || !lstrcmpiA(__argv[arg], "--no-vr"))
-			m_viewMode = ViewMode::Flat;
-	}
+void Application::Run() {
+    auto lastTime = std::chrono::high_resolution_clock::now();
+
+    while (m_running) {
+        // Process events
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ProcessEvent(event);
+        }
+
+        if (!m_running) break;
+
+        // Calculate delta time
+        auto currentTime = std::chrono::high_resolution_clock::now();
+        float elapsed = std::chrono::duration<float>(currentTime - lastTime).count();
+        elapsed = std::min(elapsed, MAX_ACCUMULATED_TIME);
+        lastTime = currentTime;
+
+        // Update game
+        if (m_pGame) {
+            m_pGame->Frame(elapsed);
+        }
+
+        // Render
+        if (m_pRenderer) {
+            m_pRenderer->BeginScene();
+            if (m_pGame) {
+                m_pRenderer->Render(m_pGame.get());
+            }
+            m_pRenderer->EndScene();
+        }
+
+        // Swap buffers
+        SDL_GL_SwapWindow(m_window);
+    }
 }
 
-bool Application::InitializeWindow(int width, int height)
-{
-	WNDCLASSEX wc{};
-	wc.cbSize = sizeof(WNDCLASSEX);
-	wc.style = CS_HREDRAW | CS_VREDRAW;
-	wc.lpfnWndProc = StaticWndProc;
-	wc.hInstance = GetModuleHandle(NULL);
-	wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_ICON));
-	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = GetStockBrush(BLACK_BRUSH);
-	wc.lpszClassName = TEXT(APP_NAME);
+void Application::ProcessEvent(const SDL_Event& event) {
+    switch (event.type) {
+        case SDL_QUIT:
+            m_running = false;
+            break;
 
-	if (!RegisterClassEx(&wc))
-		return false;
+        case SDL_KEYDOWN:
+            ProcessKeyEvent(event.key, true);
+            break;
 
-	s_pApp = this;
-	m_hwnd = CreateWindowEx(WS_EX_APPWINDOW, wc.lpszClassName, WINDOW_CAPTION, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-		CW_USEDEFAULT, CW_USEDEFAULT, width, height, NULL, NULL, wc.hInstance, nullptr);
+        case SDL_KEYUP:
+            ProcessKeyEvent(event.key, false);
+            break;
 
-	return m_hwnd != NULL;
+        case SDL_MOUSEBUTTONDOWN:
+            ProcessMouseButton(event.button, true);
+            break;
+
+        case SDL_MOUSEBUTTONUP:
+            ProcessMouseButton(event.button, false);
+            break;
+
+        case SDL_MOUSEMOTION:
+            if (m_pRenderer) {
+                m_pRenderer->MouseMove(event.motion.xrel, event.motion.yrel);
+            }
+            break;
+
+        case SDL_WINDOWEVENT:
+            if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                m_windowWidth = event.window.data1;
+                m_windowHeight = event.window.data2;
+                if (m_pRenderer) {
+                    m_pRenderer->OnResize(m_windowWidth, m_windowHeight);
+                }
+            }
+            break;
+    }
 }
 
-void Application::ActivateWindow(bool active)
-{
-	if (active)
-	{
-		m_bWindowActive = m_bIgnoreMouseMove = true;
+void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed) {
+    // Special case: ESC to quit
+    if (key.keysym.sym == SDLK_ESCAPE && pressed) {
+        m_running = false;
+        return;
+    }
 
-		RECT rect;
-		GetClientRect(m_hwnd, &rect);
-		MapWindowPoints(m_hwnd, NULL, reinterpret_cast<POINT*>(&rect), 2);
-		ClipCursor(&rect);
-	}
-	else
-	{
-		m_bWindowActive = false;
-		ClipCursor(nullptr);
-		if (m_pView)
-			m_pView->ReleaseKeys();
-	}
+    // Phase 4: Implement full key mapping
+    // For now, just pass basic keys to renderer
+    if (m_pRenderer) {
+        // TODO: Map SDL keys to VK_ codes
+        // m_pRenderer->UpdateKey(mappedKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
+    }
 }
 
-/*static*/ HWND Application::Hwnd()
-{
-	return s_pApp ? s_pApp->m_hwnd : NULL;
+void Application::ProcessMouseButton(const SDL_MouseButtonEvent& button, bool pressed) {
+    // Phase 4: Implement mouse button mapping
+    if (m_pRenderer) {
+        // TODO: Map SDL mouse buttons to VK_ codes
+    }
 }
 
-/*static*/ LRESULT CALLBACK Application::StaticWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	return s_pApp ? s_pApp->WndProc(hwnd, uMsg, wParam, lParam) : 0;
-}
+void Application::Shutdown() {
+    SDL_Log("Shutting down...");
 
-/*static*/ INT_PTR CALLBACK Application::StaticDialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	return s_pApp ? s_pApp->DialogProc(hwnd, uMsg, wParam, lParam) : 0;
-}
+    m_pGame.reset();
+    m_pAudio.reset();
+    m_pRenderer.reset();
 
-LRESULT CALLBACK Application::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
-{
-	switch (uMsg)
-	{
-	case WM_CREATE:
-	{
-		auto pcs = reinterpret_cast<CREATESTRUCT*>(lParam);
-		RECT rect = { pcs->x, pcs->y, pcs->x + pcs->cx, pcs->y + pcs->cy };
-		RestoreWindowPosition(hwnd, rect);
-		break;
-	}
+    if (m_glContext) {
+        SDL_GL_DeleteContext(m_glContext);
+        m_glContext = nullptr;
+    }
 
-	case WM_ACTIVATE:
-	case WM_ENTERMENULOOP:
-		if (uMsg != WM_ACTIVATE || wParam == WA_INACTIVE)
-			ActivateWindow(false);
-		break;
+    if (m_window) {
+        SDL_DestroyWindow(m_window);
+        m_window = nullptr;
+    }
 
-	case WM_KEYDOWN:
-		if (!(lParam & (1 << 30)))
-			m_pView->UpdateKey(static_cast<int>(wParam), KeyState::DownEdge);
-		break;
-
-	case WM_KEYUP:
-		m_pView->UpdateKey(static_cast<int>(wParam), KeyState::UpEdge);
-		break;
-
-	case WM_LBUTTONDOWN:
-		// Pass on mouse click only if active.
-		if (m_bWindowActive)
-			m_pView->UpdateKey(VK_LBUTTON, KeyState::DownEdge);
-		else
-			ActivateWindow(true);
-		break;
-
-	case WM_LBUTTONUP:
-		m_pView->UpdateKey(VK_LBUTTON, KeyState::UpEdge);
-		break;
-
-	case WM_MBUTTONDOWN:
-		m_pView->UpdateKey(VK_MBUTTON, KeyState::DownEdge);
-		break;
-
-	case WM_MBUTTONUP:
-		m_pView->UpdateKey(VK_MBUTTON, KeyState::UpEdge);
-		break;
-
-	case WM_RBUTTONDOWN:
-		m_pView->UpdateKey(VK_RBUTTON, KeyState::DownEdge);
-		break;
-
-	case WM_RBUTTONUP:
-		m_pView->UpdateKey(VK_RBUTTON, KeyState::UpEdge);
-		break;
-
-	case WM_XBUTTONDOWN:
-		m_pView->UpdateKey(VK_XBUTTON1 + HIWORD(wParam) - 1, KeyState::DownEdge);
-		break;
-
-	case WM_XBUTTONUP:
-		m_pView->UpdateKey(VK_XBUTTON1 + HIWORD(wParam) - 1, KeyState::UpEdge);
-		break;
-
-	case WM_MOUSEMOVE:
-		if (m_bWindowActive)
-		{
-			RECT rClient;
-			GetClientRect(m_hwnd, &rClient);
-
-			POINT ptCursor;
-			GetCursorPos(&ptCursor);
-			ScreenToClient(m_hwnd, &ptCursor);
-
-			POINT ptCentre = { rClient.right / 2, rClient.bottom / 2 };
-			auto dx = ptCursor.x - ptCentre.x;
-			auto dy = ptCursor.y - ptCentre.y;
-
-			if (dx || dy)
-			{
-				if (m_bIgnoreMouseMove)
-					m_bIgnoreMouseMove = false;
-				else
-					m_pView->MouseMove(dx, dy);
-
-				ClientToScreen(m_hwnd, &ptCentre);
-				SetCursorPos(ptCentre.x, ptCentre.y);
-			}
-		}
-		break;
-
-	case WM_SETCURSOR:
-		if (m_bWindowActive)
-		{
-			if (LOWORD(lParam) == HTCLIENT)
-				SetCursor(NULL);
-			return TRUE;
-		}
-		break;
-
-	case WM_SIZE:
-		if (m_pView)
-		{
-			RECT rClient{};
-			GetClientRect(m_hwnd, &rClient);
-			m_pView->OnResize(rClient.right, rClient.bottom);
-		}
-		break;
-
-	case WM_DESTROY:
-		SaveWindowPosition(m_hwnd);
-		PostQuitMessage(0);
-		return 0;
-	}
-
-	return DefWindowProc(hwnd, uMsg, wParam, lParam);
-}
-
-INT_PTR CALLBACK Application::DialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, LPARAM /*lParam*/)
-{
-	switch (uMsg)
-	{
-	case WM_INITDIALOG:
-		SetDlgItemText(hdlg, IDC_LAUNCHER_HEADER, WINDOW_CAPTION);
-		EnableWindow(GetDlgItem(hdlg, IDB_PLAY_VR), OpenVR::IsAvailable());
-		return TRUE;
-
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
-		case IDB_PLAY:
-		case IDB_PLAY_VR:
-		case IDCANCEL:
-			EndDialog(hdlg, LOWORD(wParam));
-			break;
-		case IDB_OPTIONS:
-			Augmentinel::Options(m_hinst, hdlg);
-			break;
-		}
-		break;
-	}
-
-	return FALSE;
-}
-
-void Application::SaveWindowPosition(HWND hwnd)
-{
-	WINDOWPLACEMENT wp = { sizeof(wp) };
-	GetWindowPlacement(hwnd, &wp);
-
-	RECT rect{};
-	AdjustWindowRectEx(&rect, GetWindowLong(hwnd, GWL_STYLE), FALSE, GetWindowLong(hwnd, GWL_EXSTYLE));
-	rect.left = wp.rcNormalPosition.left - rect.left;
-	rect.top = wp.rcNormalPosition.top - rect.top;
-	rect.right = wp.rcNormalPosition.right - rect.right;
-	rect.bottom = wp.rcNormalPosition.bottom - rect.bottom;
-
-	std::wstringstream ss;
-	ss << rect.left << "," << rect.top << "," <<
-		(rect.right - rect.left) << "," <<
-		(rect.bottom - rect.top) << "," <<
-		IsMaximized(hwnd) ? 1 : 0;
-	SetSetting(WINDOW_POS_KEY, ss.str());
-}
-
-bool Application::RestoreWindowPosition(HWND hwnd, const RECT& rDefault)
-{
-	std::wstringstream ss(GetSetting(WINDOW_POS_KEY, L""));
-	std::vector<int> values;
-
-	while (ss.good())
-	{
-		int value{};
-		ss >> value;
-		values.push_back(value);
-
-		if (ss.peek() == ',')
-			ss.ignore();
-	}
-
-	WINDOWPLACEMENT wp = { sizeof(wp) };
-	wp.showCmd = SW_HIDE;	// keep hidden!
-
-	if (values.size() >= 5)
-	{
-		auto x = values[0], y = values[1];
-		auto width = values[2], height = values[3];
-		m_maximised = values[4] != 0;
-		SetRect(&wp.rcNormalPosition, x, y, x + width, y + height);
-	}
-	else
-	{
-		wp.rcNormalPosition = rDefault;
-		m_maximised = true;
-	}
-
-	AdjustWindowRectEx(&wp.rcNormalPosition, GetWindowLong(hwnd, GWL_STYLE), FALSE, GetWindowLong(hwnd, GWL_EXSTYLE));
-
-	return SetWindowPlacement(hwnd, &wp) == TRUE;
+    SDL_Quit();
 }

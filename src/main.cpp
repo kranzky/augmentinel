@@ -1,24 +1,21 @@
-#include "stdafx.h"
+#include "Platform.h"
 #include "Application.h"
 
-int WINAPI WinMain(
-	_In_ HINSTANCE hInstance,
-	_In_opt_ HINSTANCE /*hPrevInstance*/,
-	_In_ LPSTR /*lpCmdLine*/,
-	_In_ int /*nShowCmd*/)
-{
-	std::unique_ptr<Application> pApplication;
+int main(int argc, char* argv[]) {
+    try {
+        Application app;
 
-	try
-	{
-		pApplication = std::make_unique<Application>(hInstance);
-		if (pApplication->Init())
-			pApplication->Run();
-	}
-	catch (std::exception& e)
-	{
-		MessageBoxA(NULL, e.what(), APP_NAME, MB_ICONERROR);
-	}
+        if (!app.Init()) {
+            SDL_Log("Application initialization failed");
+            return 1;
+        }
 
-	return 0;
+        app.Run();
+
+        return 0;
+    }
+    catch (const std::exception& e) {
+        SDL_Log("Exception: %s", e.what());
+        return 1;
+    }
 }

@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "Platform.h"
 #include "Animate.h"
 
 void AnimateModels(std::vector<Animation>& animations, float elapsed, IModelSource* model_source)

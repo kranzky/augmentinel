@@ -1,6 +1,8 @@
 #pragma once
 #include "Vertex.h"
+#ifdef PLATFORM_WINDOWS
 #include "BufferHeap.h"
+#endif
 
 enum class ModelType : uint8_t
 {
@@ -22,7 +24,7 @@ class Model
 public:
 	static Model CreateBlock(float width, float height, float depth, uint32_t colour_idx, ModelType type);
 
-	Model() = default;
+	Model() : id(-1), type(ModelType::Unknown), pos{}, rot{}, scale(1.0f), dissolved(0.0f), lighting(true), orthographic(false) {}
 	Model(
 		std::shared_ptr<std::vector<Vertex>>& pVertices,
 		std::shared_ptr<std::vector<uint32_t>>& pIndices,
@@ -51,11 +53,15 @@ public:
 
 	std::shared_ptr<std::vector<Vertex>> m_pVertices;
 	std::shared_ptr<std::vector<uint32_t>> m_pIndices;
+#ifdef PLATFORM_WINDOWS
 	std::shared_ptr<D3D11HeapAllocation> m_pHeapVertices;
 	std::shared_ptr<D3D11HeapAllocation> m_pHeapIndices;
+#endif
 	BoundingBox m_boundingBox;
 
+#ifdef PLATFORM_WINDOWS
 	ComPtr<ID3D11VertexShader> m_pVertexShader;
 	ComPtr<ID3D11PixelShader> m_pPixelShader;
+#endif
 };
 

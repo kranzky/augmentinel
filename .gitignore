@@ -8,3 +8,12 @@ desktop.ini
 /temp/
 /Releases
 .claude
+
+# CMake build directory
+/build/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+*~

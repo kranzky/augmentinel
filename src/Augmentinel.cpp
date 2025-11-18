@@ -1,12 +1,8 @@
-#include "stdafx.h"
-#include "resource.h"
-#include "Application.h"
+#include "Platform.h"
 #include "Augmentinel.h"
 #include "Action.h"
 #include "Audio.h"
-#include "View.h"
-#include "VRView.h"
-#include "OpenVR.h"
+#include "OpenGLRenderer.h"
 #include "Settings.h"
 
 constexpr auto MAX_STATE_FRAMES = 1000;		// max emulated frames in the current state.
@@ -141,7 +137,7 @@ Augmentinel::Augmentinel(std::shared_ptr<View>& pView, std::shared_ptr<Audio>& p
 		if (p.path().extension() == ".wav")
 		{
 			pAudio->LoadWAV(p.path());
-			music_files.push_back(p.path().filename());
+			music_files.push_back(p.path().filename().wstring());
 		}
 	}
 
@@ -382,7 +378,7 @@ void Augmentinel::Frame(float fElapsed)
 
 		// Limit the number of emulated frames to advance beyond reset state.
 		if (!RunUntilStateChange())
-			throw std::exception("Failed to reach title screen.\n\nSnapshot not saved at controls menu?");
+			throw std::runtime_error("Failed to reach title screen.\n\nSnapshot not saved at controls menu?");
 
 		break;
 	}
@@ -440,7 +436,9 @@ void Augmentinel::Frame(float fElapsed)
 			if (m_pView->InputAction(Action::Quit))
 			{
 				m_pView->SetEffect(ViewEffect::Fade, 1.0f);
+#ifdef PLATFORM_WINDOWS
 				PostQuitMessage(0);
+#endif
 			}
 			else if (m_pView->InputAction(Action::TitleContinue))
 				m_substate++;
@@ -453,7 +451,7 @@ void Augmentinel::Frame(float fElapsed)
 				break;
 
 			if (!RunUntilStateChange())
-				throw std::exception("Failed to reach landscape preview.\n\nPlease report this bug!");
+				throw std::runtime_error("Failed to reach landscape preview.\n\nPlease report this bug!");
 
 			break;
 		}
@@ -624,7 +622,7 @@ void Augmentinel::Frame(float fElapsed)
 			m_landscape.rot.y = 0.0f;
 
 			if (!RunUntilStateChange())
-				throw std::exception("Failed to reach main game.\n\nPlease report this bug with landscape number.");
+				throw std::runtime_error("Failed to reach main game.\n\nPlease report this bug with landscape number.");
 
 			break;
 		}
@@ -974,7 +972,11 @@ void Augmentinel::Frame(float fElapsed)
 	}
 
 	case GameState::Unknown:
+#ifdef PLATFORM_WINDOWS
+#ifdef PLATFORM_WINDOWS
 		DebugBreak();
+#endif
+#endif
 		break;
 	}
 
@@ -1817,7 +1819,9 @@ void Augmentinel::OnPlayTune(int tune_number)
 		PlayTune(COMPLETE_TUNE);
 		break;
 	default:
+#ifdef PLATFORM_WINDOWS
 		DebugBreak();
+#endif
 		break;
 	}
 
@@ -1853,11 +1857,14 @@ void Augmentinel::OnSoundEffect(int effect_number, int idx)
 		m_pAudio->Play(PING_SOUND);
 		break;
 	default:
+#ifdef PLATFORM_WINDOWS
 		DebugBreak();
+#endif
 		break;
 	}
 }
 
+#ifdef PLATFORM_WINDOWS
 bool AddToolTip(HWND hwndControl, LPCWSTR pszText)
 {
 	auto hwndTip = CreateWindowEx(
@@ -2086,3 +2093,4 @@ static INT_PTR CALLBACK OptionsDialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, L
 {
 	DialogBox(hinst, MAKEINTRESOURCE(IDD_OPTIONS), hwndParent, OptionsDialogProc);
 }
+#endif

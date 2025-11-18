@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "Platform.h"
 #include "Spectrum.h"
 #include "Settings.h"
 #include "Vertex.h"
@@ -358,8 +358,10 @@ void Spectrum::Hook(uint16_t address, uint8_t expected_opcode, HookFunction fn)
 {
 	if (m_mem[address] != expected_opcode)
 	{
+#ifdef PLATFORM_WINDOWS
 		DebugBreak();
-		throw std::exception("Snapshot is incompatible with code hooks.");
+#endif
+		throw std::runtime_error("Snapshot is incompatible with code hooks.");
 	}
 
 	HookData new_hook{};
@@ -396,7 +398,7 @@ void Spectrum::OnHook(uint16_t address)
 
 		// Fail hooking of unusual instructions, including block repeats.
 		if (Z80_PC == address)
-			throw std::exception("Failed to single-step past hooked instruction");
+			throw std::runtime_error("Failed to single-step past hooked instruction");
 	}
 	else
 	{
@@ -682,7 +684,7 @@ std::vector<Model> Spectrum::ExtractModels()
 
 		for (auto f = face_indices[m]; f < face_indices[m + 1]; ++f)
 		{
-			auto base_face_index = static_cast<DWORD>(vertices.size());
+			auto base_face_index = static_cast<uint32_t>(vertices.size());
 
 			int fv;
 			auto poly_base = &m_mem[addrs[f]];

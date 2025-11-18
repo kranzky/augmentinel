@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "Platform.h"
 #include "Camera.h"
 
 XMFLOAT3 Camera::GetPosition() const

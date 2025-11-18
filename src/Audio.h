@@ -1,52 +1,63 @@
 #pragma once
+#include "Platform.h"
 
-template <typename T>
-struct VoiceDeleter { void operator()(T* p) { if (p) p->DestroyVoice(); } };
+enum class AudioType {
+    Tune,
+    Music,
+    LoopingEffect,
+    Effect
+};
 
-template <typename T>
-using VoicePtr = std::unique_ptr<T, VoiceDeleter<T>>;
-
-enum class AudioType { Unknown, Effect, LoopingEffect, Tune, Music };
-
-class Audio
-{
+// Stub Audio class for Phase 1
+// Will be properly implemented with SDL2_mixer in Phase 4
+class Audio {
 public:
-	Audio();
-	virtual ~Audio();
+    Audio() {
+        SDL_Log("Audio stub initialized");
+    }
 
-	bool Available() const;
-	bool IsPlaying(AudioType type = AudioType::Unknown) const;
-	bool SetMusicVolume(float volume);
-	bool SetMusicPlaying(bool play);
-	void LoadWAV(fs::path path);
-	float LengthInSeconds(const std::wstring& filename);
-	bool Play(const std::wstring& filename, AudioType type = AudioType::Effect, XMFLOAT3 pos = {}, float speed = 1.0f);
-	void Stop(AudioType type = AudioType::Unknown);
-	void PositionListener(XMFLOAT3 pos, XMFLOAT3 front_dir, XMFLOAT3 up_dir);
+    ~Audio() {
+    }
 
-protected:
-	struct Sound
-	{
-		AudioType type{ AudioType::Unknown };
-		VoicePtr<IXAudio2SourceVoice> voice;
-		WAVEFORMATEX wfx{};
-		XMFLOAT3 pos{};
-		bool loop{ false };
-		bool playing{ false };
-	};
+    bool Available() const { return false; }
 
-	void FindChunk(HANDLE hFile, DWORD fourcc, DWORD& dwChunkSize, DWORD& dwChunkDataPosition);
-	void ReadChunkData(HANDLE hFile, void* buffer, DWORD buffersize, DWORD bufferoffset);
-	bool IsPlaying(const VoicePtr<IXAudio2SourceVoice>& voice) const;
-	void PositionSound(Sound& sound);
+    bool LoadWAV(const fs::path& path) {
+        return false;
+    }
 
-protected:
-	ComPtr<IXAudio2> m_pXAudio2;
-	VoicePtr<IXAudio2MasteringVoice> m_pMasteringVoice;
+    bool Play(const std::wstring& filename, AudioType type) {
+        return false;
+    }
 
-	X3DAUDIO_HANDLE m_hX3D;
-	X3DAUDIO_LISTENER m_listener{};
+    void Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos) {
+    }
 
-	std::map<std::wstring, std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> m_soundBank;
-	std::vector<Sound> m_playingSounds;
+    void Play(const std::wstring& filename) {
+    }
+
+    void PlaySound(const fs::path& path, float volume = 1.0f) {
+    }
+
+    void PlayMusic(const fs::path& path, bool loop = false) {
+    }
+
+    void SetMusicVolume(float volume) {
+    }
+
+    bool SetMusicPlaying(bool play) {
+        return false;
+    }
+
+    void PositionListener(XMFLOAT3 pos, XMFLOAT3 dir, XMFLOAT3 up) {
+    }
+
+    bool IsPlaying(AudioType type) const {
+        return false;
+    }
+
+    void Stop(AudioType type) {
+    }
+
+    void Stop() {
+    }
 };

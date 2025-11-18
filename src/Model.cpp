@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "Platform.h"
 #include "Model.h"
 
 /*static*/ Model Model::CreateBlock(float width, float height, float depth, uint32_t colour_idx, ModelType type)
@@ -243,6 +243,8 @@ std::vector<XMVECTOR> Model::GetTileCorners(int x, int z) const
 
 std::vector<Vertex>& Model::EditVertices()
 {
+#ifdef PLATFORM_WINDOWS
 	m_pHeapVertices.reset();
+#endif
 	return *m_pVertices;
 }

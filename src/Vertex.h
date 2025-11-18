@@ -7,6 +7,6 @@ struct Vertex
 
 	XMFLOAT3 pos{};
 	XMFLOAT3 normal{};
-	UINT32 colour{};
+	uint32_t colour{};
 	XMFLOAT2 texcoord{};
 };

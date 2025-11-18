@@ -1,7 +1,8 @@
-#include "stdafx.h"
-#include "Application.h"
+#include "Platform.h"
+#include "Utils.h"
 
-void Fail(HRESULT hr, LPCWSTR pszOperation)
+#ifdef PLATFORM_WINDOWS
+void Fail(int hr, const wchar_t* pszOperation)
 {
 	if (FAILED(hr))
 	{
@@ -71,6 +72,31 @@ std::vector<uint8_t> FileContents(const std::wstring& filename)
 
 	return file;
 }
+#else
+// Cross-platform FileContents implementation
+std::vector<uint8_t> FileContents(const std::wstring& filename)
+{
+	// Convert wstring to string
+	fs::path filepath(filename);
+
+	// Try opening relative to current directory
+	std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+	if (!file.is_open()) {
+		auto str = "File not found: " + to_string(filename);
+		throw std::runtime_error(str);
+	}
+
+	std::streamsize size = file.tellg();
+	file.seekg(0, std::ios::beg);
+
+	std::vector<uint8_t> buffer(size);
+	if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+		throw std::runtime_error("Failed to read file");
+	}
+
+	return buffer;
+}
+#endif
 
 std::mt19937& random_source()
 {

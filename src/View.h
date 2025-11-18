@@ -3,8 +3,10 @@
 #include "Camera.h"
 #include "Model.h"
 #include "Game.h"
+#ifdef PLATFORM_WINDOWS
 #include "BufferHeap.h"
 #include "StateTracker.h"
+#endif
 
 // The window aspect ratio depends on the resolution and pixel aspect ratios.
 static constexpr auto RESOLUTION_AR = static_cast<float>(SENTINEL_WIDTH) / SENTINEL_HEIGHT;
@@ -38,6 +40,7 @@ struct VertexConstants
 	float fog_density{};
 	uint32_t fog_colour_idx{};
 	uint32_t lighting{};
+	uint32_t padding{};  // Ensure 16-byte alignment
 };
 static_assert((sizeof(VertexConstants) & 0xf) == 0, "VS constants size must be multiple of 16");
 
@@ -83,7 +86,9 @@ public:
 
 	virtual bool IsVR() const;
 	virtual bool IsSuspended() const;
+#ifdef PLATFORM_WINDOWS
 	virtual UINT GetDXGIAdapterIndex() const;
+#endif
 	virtual void SetVerticalFOV(float fov);
 	virtual void OnResize(uint32_t rt_width, uint32_t rt_height);
 	virtual void SetInputBindings(const std::vector<ActionBinding>& bindings);
@@ -116,6 +121,7 @@ public:
 	void ReleaseKeys();
 
 protected:
+#ifdef PLATFORM_WINDOWS
 	void Init(HWND hwnd, UINT width, UINT height);
 	void InitScene();
 	HRESULT DisableAltEnter(HWND hwnd);
@@ -134,6 +140,7 @@ protected:
 		}
 		return hr;
 	}
+#endif
 
 	int m_fill_colour_idx{ BLACK_PALETTE_INDEX };
 	bool m_freelook{ true };
@@ -143,6 +150,7 @@ protected:
 	VertexConstants m_vertexConstants{};
 	PixelConstants m_pixelConstants{};
 
+#ifdef PLATFORM_WINDOWS
 	ComPtr<ID3D11Device> m_pDevice;
 	ComPtr<ID3D11DeviceContext> m_pDeviceContext;
 	ComPtr<IDXGISwapChain1> m_pSwapChain;
@@ -169,6 +177,7 @@ protected:
 	std::unique_ptr<D3D11IndexHeap<uint32_t>> m_pIndexHeap;
 
 	std::unique_ptr<D3D11StateTracker> m_pStateTracker;
+#endif
 
 	float m_mouse_divider{ 1.0f };
 	int m_msaa_samples{ DEFAULT_MSAA_SAMPLES };	// 4x MSAA
