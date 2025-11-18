@@ -235,13 +235,13 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 - [x] **BUILD SUCCESS:** Executable created at `build/Augmentinel` (1.4 MB) ✅
 - [x] Compilation warnings: Only deprecation warnings for codecvt_utf8 (acceptable)
 
-**Testing (deferred to Phase 2):**
-- [ ] Run executable: `./Augmentinel`
-- [ ] Verify: Window opens with clear color
-- [ ] Verify: ESC key closes window
-- [ ] Verify: No crashes
+**Testing:**
+- [x] Run executable: `./Augmentinel` ✅
+- [x] Verify: Window opens with clear color ✅
+- [x] Verify: ESC key closes window ✅
+- [x] Verify: No crashes ✅
 
-**Reason for deferral:** Need resources (48.rom, sentinel.sna) in build directory and working file I/O before running
+**Result:** Resources auto-copy correctly via CMake, basic execution confirmed working
 
 **Phase 1 Status:** ✅ COMPLETE
 **Phase 1 Result:** SDL2 window and OpenGL context infrastructure complete, program builds successfully, ready for shader implementation
@@ -250,23 +250,33 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** Not Started
+**Status:** In Progress (2.1 complete)
 **Prerequisites:** Phase 1 complete ✅
 
-### 2.1: Test Basic Execution
-- [ ] Copy resources to build directory (if not auto-copied)
-  - [ ] Verify 48.rom exists in build/
-  - [ ] Verify sentinel.sna exists in build/
-  - [ ] Create build/shaders/ directory
-- [ ] Run `./Augmentinel` from build directory
-- [ ] Verify window opens with dark blue clear color
-- [ ] Verify ESC key closes application
-- [ ] Check console output for errors
-- [ ] Test: No crashes ✅
+### 2.1: Test Basic Execution ✅
+- [x] Resources confirmed auto-copied by CMake ✅
+  - [x] 48.rom exists in build/
+  - [x] sentinel.sna exists in build/
+  - [x] shaders/ directory copied to build/
+- [x] Run `./Augmentinel` from build directory ✅
+- [x] Verify window opens with clear color ✅
+- [x] Verify ESC key closes application ✅
+- [x] Check console output for errors ✅
+- [x] Test: No crashes ✅
+
+**Result:** Basic execution fully working, ready for shader implementation
+
+**Discovered shaders available:**
+- `shaders/Sentinel_VS.hlsl` / `Sentinel_PS.hlsl` - Main game rendering (PRIORITY)
+- `shaders/Effect_VS.hlsl` / `Effect_PS.hlsl` - Post-processing effects (PRIORITY)
+- `shaders/Pointer_VS.hlsl` / `Pointer_PS.hlsl` - VR pointer (defer to Phase 6)
+- `shaders/Mirror_VS.hlsl` / `Mirror_PS.hlsl` - VR mirror view (defer to Phase 6)
+- `shaders/OpenVR_VS.hlsl` / `OpenVR_PS.hlsl` - VR rendering (defer to Phase 6)
+
+**Phase 2 Strategy:** Focus on Sentinel and Effect shaders first (non-VR gameplay)
 
 ### 2.2: Convert Sentinel Vertex Shader
-- [ ] Locate original HLSL shader in Windows build
-  - [ ] Find Sentinel.vert.hlsl or embedded shader code
+- [ ] Read existing `shaders/Sentinel_VS.hlsl`
   - [ ] Document cbuffer structure
   - [ ] Note input/output semantics
 - [ ] Create `shaders/Sentinel.vert`
