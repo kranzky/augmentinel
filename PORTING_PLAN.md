@@ -1297,11 +1297,21 @@ private:
 
 ## Phase 5: Effects & Polish (2-3 days)
 
-**Goal:** Implement post-processing effects, camera controls, polish visuals
+**Goal:** Implement post-processing effects, camera controls, polish visuals, fix deprecation warnings
+
+**Note:** Deprecation warnings from Phase 1 (codecvt_utf8 in Utils.h) will be addressed in this phase. Decision was made to defer these non-blocking warnings to focus on critical path (shaders, rendering, gameplay) in Phases 2-4.
 
 ### Tasks
 
-#### 5.1: Implement Framebuffer for Effects
+#### 5.1: Fix Deprecation Warnings (Deferred from Phase 1)
+
+Replace deprecated C++17 string conversion facilities in `Utils.h`:
+- `std::codecvt_utf8` → platform-specific converters or C++20/library solution
+- `std::wstring_convert` → platform-specific converters or C++20/library solution
+- Functions affected: `to_wstring()`, `to_string()`
+- Test file I/O after changes (48.rom, sentinel.sna, sounds loading)
+
+#### 5.2: Implement Framebuffer for Effects
 
 ```cpp
 // Create FBO for post-processing
@@ -1321,7 +1331,7 @@ glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_width, m_height);
 glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depthbuffer);
 ```
 
-#### 5.2: Implement Effect Pass
+#### 5.3: Implement Effect Pass
 
 ```cpp
 void OpenGLRenderer::EndScene() {
@@ -1344,7 +1354,7 @@ void OpenGLRenderer::EndScene() {
 }
 ```
 
-#### 5.3: Mouse Look
+#### 5.4: Mouse Look
 
 ```cpp
 void OpenGLRenderer::MouseMove(int xrel, int yrel) {

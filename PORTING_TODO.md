@@ -234,6 +234,9 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
   - [x] Added View.cpp to CMakeLists.txt
 - [x] **BUILD SUCCESS:** Executable created at `build/Augmentinel` (1.4 MB) ✅
 - [x] Compilation warnings: Only deprecation warnings for codecvt_utf8 (acceptable)
+  - **Decision:** Defer to Phase 5 - warnings don't block functionality, won't interfere with shader work
+  - Source: `Utils.h` lines 52-62 - `std::codecvt_utf8` and `std::wstring_convert` deprecated in C++17
+  - Impact: None - code works correctly, warnings are noise but manageable
 
 **Testing:**
 - [x] Run executable: `./Augmentinel` ✅
@@ -716,7 +719,23 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 **Status:** Not Started
 **Prerequisites:** Phase 4 complete
 
-*(Content unchanged from original)*
+### 5.1: Fix Deprecation Warnings
+**Deferred from Phase 1** - Fix codecvt_utf8 warnings in Utils.h
+
+- [ ] Replace deprecated `std::codecvt_utf8` and `std::wstring_convert` in Utils.h
+  - [ ] Option 1: Use platform-specific converters (mbstowcs/wcstombs)
+  - [ ] Option 2: Use C++20 std::format with char8_t (if upgrading to C++20)
+  - [ ] Option 3: Use third-party library (ICU, boost::locale)
+- [ ] Update `to_wstring()` function (line 50-55)
+- [ ] Update `to_string()` function (line 57-62)
+- [ ] Test file I/O still works (loading 48.rom, sentinel.sna, sounds)
+- [ ] Verify clean build with zero warnings
+
+**Why deferred:** Warnings don't block functionality; focus on critical path (shaders, rendering, gameplay) first.
+
+### 5.2: Post-Processing Effects
+
+*(Content from original Phase 5)*
 
 ---
 
