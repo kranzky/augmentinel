@@ -29,10 +29,87 @@ For more details see: https://simonowen.com/spectrum/augmentinel/
 
 ## Building
 
-Building currently requires Visual Studio 2019 or later.
+### Windows (Original)
 
-The current code uses the Win32 and D3D11 APIs so it's not yet portable to
-non-Windows platforms. It's hoped that will change in the future.
+Building the Windows version requires Visual Studio 2019 or later.
+
+The Windows code uses the Win32 and D3D11 APIs.
+
+### macOS/Linux (SDL2 + OpenGL Port) 🚧 In Progress
+
+A cross-platform port using SDL2 and OpenGL is currently in development.
+
+**Status**: Phase 1 Complete ✅ (Build system & foundation working)
+
+**Current Phase**: Phase 2 - Shader Pipeline (HLSL → GLSL conversion)
+
+#### Prerequisites
+
+**macOS:**
+```bash
+# Install Homebrew if not already installed
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install dependencies
+brew install cmake sdl2 sdl2_mixer
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+sudo apt update
+sudo apt install build-essential cmake libsdl2-dev libsdl2-mixer-dev
+```
+
+#### Build Instructions
+
+```bash
+# Clone repository (if not already done)
+cd augmentinel
+
+# Create build directory and configure
+mkdir build
+cd build
+cmake ..
+
+# Build
+cmake --build .
+
+# Run (from build directory)
+./Augmentinel
+```
+
+#### Clean Build
+
+To perform a complete clean build:
+
+```bash
+rm -rf build
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
+
+#### Build Details
+
+- **C++ Standard**: C++17
+- **Graphics API**: OpenGL 3.3 Core Profile
+- **Math Library**: DirectXMath (cross-platform)
+- **Windowing**: SDL2
+- **Audio**: SDL2_mixer (planned for Phase 4)
+- **Build System**: CMake 3.15+
+
+#### Current Limitations
+
+- Shaders not yet converted (Phase 2 - in progress)
+- Audio system stubbed out (Phase 4)
+- Settings system stubbed out (Phase 4)
+- VR support not yet ported (future enhancement)
+
+For detailed porting progress, see:
+- `PORTING_TODO.md` - Detailed task checklist
+- `PORTING_PLAN.md` - Implementation plan
+- `PORTING_ANALYSIS.md` - Technical analysis
 
 ## License
 
