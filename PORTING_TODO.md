@@ -1,6 +1,6 @@
 # Augmentinel Porting TODO List
 
-**Status:** Phase 1 Complete ✅, Phase 2.1-2.3 Complete ✅
+**Status:** Phase 1 Complete ✅, Phase 2.1-2.4 Complete ✅
 **Current Phase:** Phase 2 (Shader Pipeline)
 **Last Updated:** 2025-11-19
 
@@ -253,7 +253,7 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** In Progress (2.1-2.3 complete ✅)
+**Status:** In Progress (2.1-2.4 complete ✅)
 **Prerequisites:** Phase 1 complete ✅
 
 ### 2.1: Test Basic Execution ✅
@@ -317,26 +317,29 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 - HLSL `frac()` → GLSL `fract()`
 - HLSL `fmod()` → GLSL `mod()`
 
-### 2.4: Convert Effect Shaders (Post-Processing)
-- [ ] Create `shaders/Effect.vert`
-  - [ ] Use gl_VertexID to generate fullscreen quad:
-    ```glsl
-    vec2 positions[3] = vec2[](
-        vec2(-1, -1), vec2(3, -1), vec2(-1, 3)
-    );
-    gl_Position = vec4(positions[gl_VertexID], 0, 1);
-    v_texcoord = positions[gl_VertexID] * 0.5 + 0.5;
-    ```
-  - [ ] Output texture coordinates
-- [ ] Create `shaders/Effect.frag`
-  - [ ] Add `uniform sampler2D u_sceneTexture;`
-  - [ ] Add PixelConstants uniform block (binding = 1)
-  - [ ] Sample scene texture
-  - [ ] Port view_dissolve logic (noise-based dissolve)
-  - [ ] Port view_desaturate logic (convert to grayscale)
-  - [ ] Port view_fade logic (fade to black)
-  - [ ] Combine effects and output
-- [ ] Test: Shader syntax check
+### 2.4: Convert Effect Shaders (Post-Processing) ✅
+- [x] Read existing `shaders/Effect_VS.hlsl` and `shaders/Effect_PS.hlsl`
+- [x] Create `shaders/Effect.vert` with GLSL #version 330 core
+  - [x] Use `gl_VertexID` to generate fullscreen quad (vertices 0, 1, 2, 3)
+  - [x] Generate UV coordinates from vertex ID (0→(0,0), 1→(1,0), 2→(0,1), 3→(1,1))
+  - [x] Map UV [0,1] to clip space [-1,1]
+  - [x] Flip Y for correct texture orientation
+- [x] Create `shaders/Effect.frag` with GLSL #version 330 core
+  - [x] Add `uniform sampler2D u_sceneTexture;` for scene sampling
+  - [x] Add PixelConstants uniform block (std140, binding = 1)
+  - [x] Sample scene texture with `texture()` function
+  - [x] Port view_dissolve logic (noise-based dissolve with discard)
+  - [x] Port view_desaturate logic (convert to grayscale using luminance)
+  - [x] Port view_fade logic (fade to black)
+  - [x] Combine effects and output
+- [x] Test: Build succeeded, shaders copied to build directory
+
+**Key conversions:**
+- No vertex attributes needed - fullscreen quad generated from `gl_VertexID`
+- HLSL `Texture2D tex` + `sampler samp` → GLSL `uniform sampler2D u_sceneTexture`
+- HLSL `tex.Sample(samp, uv)` → GLSL `texture(u_sceneTexture, uv)`
+- Same PixelConstants uniform block structure as Sentinel fragment shader
+- All three view effects applied sequentially: dissolve, desaturate, fade
 
 ### 2.5: Implement Shader Loading
 - [ ] Add shader loading methods to OpenGLRenderer
@@ -769,15 +772,15 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 ## Progress Tracking
 
 **Phase 1:** ✅ Complete (Build system, foundation, first successful build)
-**Phase 2:** 🔄 In Progress (2.1-2.3 complete: Sentinel shaders converted)
+**Phase 2:** 🔄 In Progress (2.1-2.4 complete: Sentinel & Effect shaders converted)
 **Phase 3:** ⬜ Not Started (Model rendering)
 **Phase 4:** ⬜ Not Started (Game integration)
 **Phase 5:** ⬜ Not Started (Effects & polish)
 **Phase 6:** ⬜ Not Started (Testing & debug)
 
-**Overall Progress:** ~20% Complete (Phase 1 complete + Phase 2 started)
+**Overall Progress:** ~25% Complete (Phase 1 complete + Phase 2 shader conversion done)
 **Executable Status:** Builds successfully ✅ (1.4 MB)
-**Shaders Status:** Sentinel vertex & fragment shaders converted to GLSL ✅
+**Shaders Status:** Sentinel & Effect shaders converted to GLSL ✅
 **Next Milestone:** Implement shader loading and compilation (Phase 2.5-2.6)
 
 ---
