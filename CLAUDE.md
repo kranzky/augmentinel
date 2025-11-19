@@ -6,7 +6,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Augmentinel is a re-skinned version of Geoff Crammond's classic game "The Sentinel" (aka The Sentry). It emulates the ZX Spectrum version for authentic gameplay while adding modern enhancements including accelerated 3D rendering, VR support, and features from other platform ports.
 
+**IMPORTANT:** This codebase has TWO implementations:
+1. **Windows (Original)** - Win32 + Direct3D 11 - Fully functional
+2. **SDL2 + OpenGL (Port)** - macOS/Linux - **Currently in development (Phase 2.7/11)**
+
+When working on this codebase, check:
+- **For SDL2+OpenGL port work:** See `PORTING_TODO.md` for current status and next tasks
+- **For Windows version:** Original build instructions below
+
 ## Build Commands
+
+### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
+
+**Status**: Phase 2.7 complete (shaders converted, UBOs created)
+
+**Build:**
+```bash
+cd build
+cmake ..
+cmake --build .
+```
+
+**Run:**
+```bash
+# Normal mode (ESC to exit)
+./Augmentinel
+
+# Screenshot mode (renders one frame, saves screenshot.png, exits)
+./Augmentinel --screenshot
+```
+
+**Current Implementation:**
+- ✅ SDL2 windowing and OpenGL 3.3 Core context
+- ✅ GLSL shaders (Sentinel.vert/frag, Effect.vert/frag)
+- ✅ Uniform buffers (UBOs) created and bound
+- ✅ Screenshot tool for testing
+- ⏳ Uniform buffer updates (Phase 2.8)
+- ⏳ Model rendering (Phase 2.9-3.x)
+
+**Key Files:**
+- `src/OpenGLRenderer.cpp/h` - OpenGL renderer implementation
+- `src/Application.cpp/h` - SDL2 application/window management
+- `shaders/*.vert, *.frag` - GLSL shaders (OpenGL 3.3)
+- `PORTING_TODO.md` - Detailed progress tracking
+
+### Windows (Original)
 
 **Build the project:**
 ```bash
@@ -114,3 +158,93 @@ Shaders are compiled to shader model 4.0 and embedded as header files in interme
 - Spectrum memory: 16KB ROM + 48KB RAM
 - Game logic executes in Z80 emulator, rendering/audio handled natively
 - Unlocked 57,344 hex landscapes (vs original 10,000)
+
+---
+
+## SDL2 + OpenGL Port Architecture (In Development)
+
+### Platform Abstraction
+
+**Platform.h** - Central platform header that handles cross-platform differences:
+- Detects platform (PLATFORM_MACOS, PLATFORM_WINDOWS, PLATFORM_LINUX)
+- Includes SDL2 and OpenGL headers
+- Includes DirectXMath (cross-platform math library)
+- Maps VK_* virtual key codes to SDL keycodes
+- Wraps Windows-specific code in `#ifdef PLATFORM_WINDOWS`
+
+### OpenGL Renderer (`OpenGLRenderer.cpp/h`)
+
+Implements the `View` interface using OpenGL 3.3 Core Profile:
+
+**Initialization:**
+- Creates and compiles GLSL shader programs (Sentinel, Effect)
+- Creates uniform buffer objects (UBOs) for shader constants
+- Binds uniform blocks to binding points (VertexConstants→0, PixelConstants→1)
+
+**Shader Pipeline:**
+- `Sentinel.vert/frag` - Main game rendering with lighting, fog, z-fade
+- `Effect.vert/frag` - Post-processing (dissolve, desaturate, fade)
+- Shaders loaded at runtime from `shaders/` directory
+- std140 layout for uniform blocks matches C++ struct layout
+
+**Uniform Buffers:**
+- VertexConstants: 480 bytes (WVP, W, Palette[20], EyePos, lighting flags)
+- PixelConstants: 32 bytes (dissolved, noise, view effects)
+- Both structs have padding for 16-byte alignment (std140 requirement)
+
+**Key Differences from Windows Version:**
+- Runtime shader loading vs compile-time embedding
+- Uniform buffers (UBOs) vs constant buffers
+- GLSL syntax (mix, clamp) vs HLSL (lerp, saturate)
+- Column-major matrices (requires transpose from DirectXMath row-major)
+- No binding qualifiers in shaders (OpenGL 3.3 limitation)
+
+### SDL2 Application (`Application.cpp/h`)
+
+Replaces Win32 API with SDL2:
+- Window creation and OpenGL context management
+- Event loop (SDL_PollEvent vs GetMessage)
+- Input handling (keyboard, mouse)
+- Screenshot capability (`--screenshot` flag)
+  - Uses stb_image_write.h to save PNG
+  - Renders one frame and exits for automated testing
+
+### Shared Components (Cross-Platform)
+
+These components work on both platforms with minimal changes:
+- **Spectrum.cpp/h** - Z80 emulator (platform-independent)
+- **Model.cpp/h** - Model extraction and representation
+- **Camera.cpp/h** - Camera mathematics
+- **Augmentinel.cpp/h** - Game logic (with platform-specific sections wrapped)
+
+**Portability Strategy:**
+- Model class has platform-specific members wrapped in `#ifdef PLATFORM_WINDOWS`
+- OpenGL renderer stores VBO/IBO handles separately (not in Model)
+- DirectXMath used for math (works on all platforms with proper defines)
+
+### Build System
+
+**CMake** (replaces Visual Studio solution):
+- FetchContent for DirectXMath dependency
+- SDL2 and OpenGL found via find_package
+- Shaders copied to build directory (not compiled)
+- Resources (48.rom, sentinel.sna, sounds/) auto-copied
+
+### Current Port Status
+
+See `PORTING_TODO.md` for detailed checklist. Summary:
+
+**Phase 1 (Complete):** Build system, foundation, stubs
+**Phase 2 (In Progress - 2.7/11):**
+- ✅ Shaders converted (HLSL → GLSL)
+- ✅ Shader programs compiled and linked
+- ✅ Uniform buffers created and bound
+- ⏳ Uniform buffer updates (next)
+- ⏳ Test triangle rendering
+- ⏳ Camera and projection setup
+
+**Future Phases:**
+- Phase 3: Model rendering
+- Phase 4: Game integration (audio, input, settings)
+- Phase 5: Effects & polish
+- Phase 6: Testing & debugging

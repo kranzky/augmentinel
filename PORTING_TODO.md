@@ -870,7 +870,9 @@ cmake --build .
 **Run:**
 ```bash
 cd build
-./Augmentinel
+./Augmentinel                # Normal mode (ESC to exit)
+./Augmentinel --screenshot   # Capture screenshot.png and exit
+./Augmentinel --help         # Show command-line options
 ```
 
 **Debug with lldb:**

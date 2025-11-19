@@ -39,9 +39,18 @@ The Windows code uses the Win32 and D3D11 APIs.
 
 A cross-platform port using SDL2 and OpenGL is currently in development.
 
-**Status**: Phase 1 Complete ✅ (Build system & foundation working)
+**Status**: Phase 1 Complete ✅, Phase 2 Progressing (2.1-2.7 complete) ✅
 
-**Current Phase**: Phase 2 - Shader Pipeline (HLSL → GLSL conversion)
+**Current Phase**: Phase 2 - Shader Pipeline (Shaders converted, UBOs created)
+
+**Recent Milestones**:
+- ✅ SDL2 + OpenGL 3.3 build system working
+- ✅ HLSL shaders converted to GLSL (Sentinel & Effect)
+- ✅ Shader programs compiled and linked (IDs: 3, 4)
+- ✅ Uniform buffers (UBOs) created and bound
+- ✅ Screenshot tool for automated testing (`--screenshot`)
+
+**Next**: Implement uniform buffer update methods, then render test triangle
 
 #### Prerequisites
 
@@ -99,9 +108,24 @@ cmake --build .
 - **Audio**: SDL2_mixer (planned for Phase 4)
 - **Build System**: CMake 3.15+
 
+#### Testing
+
+```bash
+# Run normally (ESC to exit)
+./Augmentinel
+
+# Capture screenshot and exit (for automated testing)
+./Augmentinel --screenshot
+
+# Show help
+./Augmentinel --help
+```
+
+The screenshot tool renders one frame, saves `screenshot.png` (1600x900), and exits automatically.
+
 #### Current Limitations
 
-- Shaders not yet converted (Phase 2 - in progress)
+- Model rendering not yet implemented (Phase 2.8-2.11, then Phase 3)
 - Audio system stubbed out (Phase 4)
 - Settings system stubbed out (Phase 4)
 - VR support not yet ported (future enhancement)
