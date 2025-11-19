@@ -122,10 +122,7 @@ void Application::Run(bool dumpScreenshot) {
             m_pRenderer->EndScene();
         }
 
-        // Swap buffers
-        SDL_GL_SwapWindow(m_window);
-
-        // Dump screenshot and exit if requested
+        // Dump screenshot BEFORE swap if requested (to capture back buffer)
         if (dumpScreenshot) {
             SDL_Log("Capturing screenshot...");
 
@@ -134,7 +131,7 @@ void Application::Run(bool dumpScreenshot) {
             int height = m_windowHeight;
             std::vector<uint8_t> pixels(width * height * 3);
 
-            // Read pixels from framebuffer
+            // Read pixels from back buffer (where we just rendered)
             glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
 
             // Flip image vertically (OpenGL has origin at bottom-left, image formats at top-left)
@@ -155,6 +152,9 @@ void Application::Run(bool dumpScreenshot) {
             m_running = false;
             break;
         }
+
+        // Swap buffers (after screenshot if needed)
+        SDL_GL_SwapWindow(m_window);
     }
 }
 
