@@ -87,6 +87,60 @@ bool OpenGLRenderer::Init() {
     SDL_Log("  - Sentinel program: %u", m_sentinelProgram);
     SDL_Log("  - Effect program: %u", m_effectProgram);
 
+    // Create uniform buffers (UBOs)
+    SDL_Log("OpenGLRenderer: Creating uniform buffers...");
+
+    // Create vertex constants UBO
+    glGenBuffers(1, &m_vertexConstantsUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, m_vertexConstantsUBO);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(VertexConstants), nullptr, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_vertexConstantsUBO);  // Binding point 0
+    SDL_Log("  - Vertex constants UBO: %u (size: %zu bytes)", m_vertexConstantsUBO, sizeof(VertexConstants));
+
+    // Create pixel constants UBO
+    glGenBuffers(1, &m_pixelConstantsUBO);
+    glBindBuffer(GL_UNIFORM_BUFFER, m_pixelConstantsUBO);
+    glBufferData(GL_UNIFORM_BUFFER, sizeof(PixelConstants), nullptr, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_pixelConstantsUBO);  // Binding point 1
+    SDL_Log("  - Pixel constants UBO: %u (size: %zu bytes)", m_pixelConstantsUBO, sizeof(PixelConstants));
+
+    // Unbind buffer
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+    // Set uniform block bindings for shader programs
+    GLuint vertexBlockIndex = glGetUniformBlockIndex(m_sentinelProgram, "VertexConstants");
+    if (vertexBlockIndex != GL_INVALID_INDEX) {
+        glUniformBlockBinding(m_sentinelProgram, vertexBlockIndex, 0);
+        SDL_Log("  - Bound VertexConstants in Sentinel program to binding point 0");
+    } else {
+        SDL_Log("WARNING: VertexConstants block not found in Sentinel program");
+    }
+
+    GLuint pixelBlockIndexSentinel = glGetUniformBlockIndex(m_sentinelProgram, "PixelConstants");
+    if (pixelBlockIndexSentinel != GL_INVALID_INDEX) {
+        glUniformBlockBinding(m_sentinelProgram, pixelBlockIndexSentinel, 1);
+        SDL_Log("  - Bound PixelConstants in Sentinel program to binding point 1");
+    } else {
+        SDL_Log("WARNING: PixelConstants block not found in Sentinel program");
+    }
+
+    GLuint pixelBlockIndexEffect = glGetUniformBlockIndex(m_effectProgram, "PixelConstants");
+    if (pixelBlockIndexEffect != GL_INVALID_INDEX) {
+        glUniformBlockBinding(m_effectProgram, pixelBlockIndexEffect, 1);
+        SDL_Log("  - Bound PixelConstants in Effect program to binding point 1");
+    } else {
+        SDL_Log("WARNING: PixelConstants block not found in Effect program");
+    }
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: OpenGL error during UBO creation: 0x%x", err);
+        return false;
+    }
+
+    SDL_Log("OpenGLRenderer: Uniform buffers created successfully");
+
     return true;
 }
 

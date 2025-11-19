@@ -1,7 +1,7 @@
 # Augmentinel Porting TODO List
 
-**Status:** Phase 1 Complete ✅, Phase 2.1-2.6 Complete ✅
-**Current Phase:** Phase 2 (Shader Pipeline - Nearly Complete!)
+**Status:** Phase 1 Complete ✅, Phase 2.1-2.7 Complete ✅
+**Current Phase:** Phase 2 (Shader Pipeline - Uniform Buffers Created!)
 **Last Updated:** 2025-11-19
 
 Use this file to track progress through the SDL2+OpenGL port. Check off items as you complete them.
@@ -253,7 +253,7 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** In Progress (2.1-2.6 complete ✅ - Shaders loading!)
+**Status:** In Progress (2.1-2.7 complete ✅ - UBOs created!)
 **Prerequisites:** Phase 1 complete ✅
 
 ### 2.1: Test Basic Execution ✅
@@ -417,23 +417,39 @@ INFO:   - Effect program: 4
 
 **Note:** Uniform block bindings will be set programmatically in Phase 2.7 using glUniformBlockBinding()
 
-### 2.7: Create Uniform Buffers (UBOs)
-- [ ] In OpenGLRenderer::Init()
-  - [ ] Create vertex constants UBO:
-    ```cpp
-    glGenBuffers(1, &m_vertexConstantsUBO);
-    glBindBuffer(GL_UNIFORM_BUFFER, m_vertexConstantsUBO);
-    glBufferData(GL_UNIFORM_BUFFER, sizeof(VertexConstants), nullptr, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_vertexConstantsUBO);
-    ```
-  - [ ] Create pixel constants UBO similarly
-    - [ ] Bind to binding point 1
-  - [ ] Verify sizes match between C++ and GLSL
-    - [ ] sizeof(VertexConstants) should match shader
-    - [ ] Check std140 padding (vec3 → vec4 alignment)
-    - [ ] May need padding fields in C++ struct (already added in Phase 1)
-  - [ ] Unbind buffer
-- [ ] Test: UBOs created, check glGetError()
+### 2.7: Create Uniform Buffers (UBOs) ✅
+- [x] In OpenGLRenderer::Init()
+  - [x] Create vertex constants UBO with glGenBuffers/glBufferData
+  - [x] Bind to binding point 0 with glBindBufferBase
+  - [x] Create pixel constants UBO similarly
+    - [x] Bind to binding point 1
+  - [x] Set uniform block bindings with glUniformBlockBinding
+    - [x] VertexConstants in Sentinel program → binding point 0
+    - [x] PixelConstants in Sentinel program → binding point 1
+    - [x] PixelConstants in Effect program → binding point 1
+  - [x] Verify sizes match between C++ and GLSL
+    - [x] sizeof(VertexConstants) = 480 bytes ✅
+    - [x] sizeof(PixelConstants) = 32 bytes ✅
+    - [x] Check std140 padding - structs already have padding from Phase 1 ✅
+  - [x] Unbind buffer
+  - [x] Check for OpenGL errors with glGetError()
+- [x] Test: UBOs created successfully, no errors ✅
+
+**Test Results:**
+```
+INFO: OpenGLRenderer: Creating uniform buffers...
+INFO:   - Vertex constants UBO: 1 (size: 480 bytes)
+INFO:   - Pixel constants UBO: 2 (size: 32 bytes)
+INFO:   - Bound VertexConstants in Sentinel program to binding point 0
+INFO:   - Bound PixelConstants in Sentinel program to binding point 1
+INFO:   - Bound PixelConstants in Effect program to binding point 1
+INFO: OpenGLRenderer: Uniform buffers created successfully
+```
+
+**Bonus:**
+- [x] Added `--screenshot` command-line option for automated testing
+- [x] Integrated stb_image_write.h for PNG screenshot capture
+- [x] Screenshot functionality verified (1600x900 PNG, 42kB)
 
 ### 2.8: Update Uniform Buffers
 - [ ] Create UpdateVertexConstants() method
@@ -807,17 +823,19 @@ INFO:   - Effect program: 4
 ## Progress Tracking
 
 **Phase 1:** ✅ Complete (Build system, foundation, first successful build)
-**Phase 2:** 🔄 In Progress (2.1-2.6 complete: Shaders compiling successfully!)
+**Phase 2:** 🔄 In Progress (2.1-2.7 complete: UBOs created successfully!)
 **Phase 3:** ⬜ Not Started (Model rendering)
 **Phase 4:** ⬜ Not Started (Game integration)
 **Phase 5:** ⬜ Not Started (Effects & polish)
 **Phase 6:** ⬜ Not Started (Testing & debug)
 
-**Overall Progress:** ~32% Complete (Phase 1 complete + Phase 2 mostly complete)
+**Overall Progress:** ~35% Complete (Phase 1 complete + Phase 2 progressing well)
 **Executable Status:** Builds successfully ✅ (1.4 MB)
 **Shaders Status:** Sentinel & Effect shaders compiled and linked ✅
 **Shader Programs:** Sentinel (ID: 3), Effect (ID: 4) ✅
-**Next Milestone:** Create uniform buffers (UBOs) for shader constants (Phase 2.7)
+**UBO Status:** Vertex constants (480 bytes), Pixel constants (32 bytes) ✅
+**Screenshot Tool:** `./Augmentinel --screenshot` saves screenshot.png and exits ✅
+**Next Milestone:** Implement uniform buffer update methods (Phase 2.8)
 
 ---
 

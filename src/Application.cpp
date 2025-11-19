@@ -4,6 +4,9 @@
 #include "Augmentinel.h"
 #include "Settings.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 static constexpr float MAX_ACCUMULATED_TIME = 0.25f;
 
 Application::Application() {
@@ -87,7 +90,7 @@ bool Application::Init() {
     return true;
 }
 
-void Application::Run() {
+void Application::Run(bool dumpScreenshot) {
     auto lastTime = std::chrono::high_resolution_clock::now();
 
     while (m_running) {
@@ -121,6 +124,37 @@ void Application::Run() {
 
         // Swap buffers
         SDL_GL_SwapWindow(m_window);
+
+        // Dump screenshot and exit if requested
+        if (dumpScreenshot) {
+            SDL_Log("Capturing screenshot...");
+
+            // Allocate buffer for screenshot (RGB, no alpha)
+            int width = m_windowWidth;
+            int height = m_windowHeight;
+            std::vector<uint8_t> pixels(width * height * 3);
+
+            // Read pixels from framebuffer
+            glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+            // Flip image vertically (OpenGL has origin at bottom-left, image formats at top-left)
+            std::vector<uint8_t> flipped(width * height * 3);
+            for (int y = 0; y < height; y++) {
+                memcpy(&flipped[y * width * 3], &pixels[(height - 1 - y) * width * 3], width * 3);
+            }
+
+            // Save as PNG
+            const char* filename = "screenshot.png";
+            if (stbi_write_png(filename, width, height, 3, flipped.data(), width * 3)) {
+                SDL_Log("Screenshot saved: %s (%dx%d)", filename, width, height);
+            } else {
+                SDL_Log("ERROR: Failed to save screenshot");
+            }
+
+            // Exit
+            m_running = false;
+            break;
+        }
     }
 }
 

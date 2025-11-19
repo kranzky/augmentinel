@@ -10,7 +10,7 @@ public:
     ~Application();
 
     bool Init();
-    void Run();
+    void Run(bool dumpScreenshot = false);
     void Shutdown();
 
 private:
