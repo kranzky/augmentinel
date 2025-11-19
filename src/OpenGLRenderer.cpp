@@ -114,3 +114,107 @@ void OpenGLRenderer::GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const {
     vPos = m_camera.GetPositionVector();
     vDir = m_camera.GetDirectionVector();
 }
+
+// Shader loading helpers
+
+std::string OpenGLRenderer::LoadShaderFile(const std::string& filename) {
+    // Try to open the shader file from the shaders/ directory
+    std::string path = "shaders/" + filename;
+    std::ifstream file(path);
+
+    if (!file.is_open()) {
+        SDL_Log("ERROR: Failed to open shader file: %s", path.c_str());
+        return "";
+    }
+
+    // Read entire file into string
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string source = buffer.str();
+
+    SDL_Log("Loaded shader file: %s (%zu bytes)", path.c_str(), source.length());
+    return source;
+}
+
+GLuint OpenGLRenderer::CompileShader(const char* source, GLenum type, const char* name) {
+    // Create shader object
+    GLuint shader = glCreateShader(type);
+    if (shader == 0) {
+        SDL_Log("ERROR: Failed to create shader object for %s", name);
+        return 0;
+    }
+
+    // Set shader source and compile
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    // Check compilation status
+    GLint status = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+
+    if (status == GL_FALSE) {
+        // Get error log
+        GLint logLength = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+
+        if (logLength > 0) {
+            std::vector<char> log(logLength);
+            glGetShaderInfoLog(shader, logLength, nullptr, log.data());
+            SDL_Log("ERROR: Shader compilation failed for %s:\n%s", name, log.data());
+        } else {
+            SDL_Log("ERROR: Shader compilation failed for %s (no log available)", name);
+        }
+
+        glDeleteShader(shader);
+        return 0;
+    }
+
+    SDL_Log("Compiled shader: %s", name);
+    return shader;
+}
+
+GLuint OpenGLRenderer::LinkProgram(GLuint vs, GLuint fs, const char* name) {
+    // Create program object
+    GLuint program = glCreateProgram();
+    if (program == 0) {
+        SDL_Log("ERROR: Failed to create program object for %s", name);
+        return 0;
+    }
+
+    // Attach shaders
+    glAttachShader(program, vs);
+    glAttachShader(program, fs);
+
+    // Link program
+    glLinkProgram(program);
+
+    // Check link status
+    GLint status = 0;
+    glGetProgramiv(program, GL_LINK_STATUS, &status);
+
+    if (status == GL_FALSE) {
+        // Get error log
+        GLint logLength = 0;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
+
+        if (logLength > 0) {
+            std::vector<char> log(logLength);
+            glGetProgramInfoLog(program, logLength, nullptr, log.data());
+            SDL_Log("ERROR: Program linking failed for %s:\n%s", name, log.data());
+        } else {
+            SDL_Log("ERROR: Program linking failed for %s (no log available)", name);
+        }
+
+        glDeleteProgram(program);
+        return 0;
+    }
+
+    // Detach and delete shader objects (no longer needed after linking)
+    glDetachShader(program, vs);
+    glDetachShader(program, fs);
+    glDeleteShader(vs);
+    glDeleteShader(fs);
+
+    SDL_Log("Linked shader program: %s", name);
+    return program;
+}

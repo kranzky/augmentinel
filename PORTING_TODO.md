@@ -1,6 +1,6 @@
 # Augmentinel Porting TODO List
 
-**Status:** Phase 1 Complete ✅, Phase 2.1-2.4 Complete ✅
+**Status:** Phase 1 Complete ✅, Phase 2.1-2.5 Complete ✅
 **Current Phase:** Phase 2 (Shader Pipeline)
 **Last Updated:** 2025-11-19
 
@@ -253,7 +253,7 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** In Progress (2.1-2.4 complete ✅)
+**Status:** In Progress (2.1-2.5 complete ✅)
 **Prerequisites:** Phase 1 complete ✅
 
 ### 2.1: Test Basic Execution ✅
@@ -341,29 +341,38 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 - Same PixelConstants uniform block structure as Sentinel fragment shader
 - All three view effects applied sequentially: dissolve, desaturate, fade
 
-### 2.5: Implement Shader Loading
-- [ ] Add shader loading methods to OpenGLRenderer
-  - [ ] `std::string LoadShaderFile(const std::string& filename)`
-    - [ ] Open file in shaders/ directory
-    - [ ] Read entire contents
-    - [ ] Return as string
-    - [ ] Handle file not found
-  - [ ] `GLuint CompileShader(const char* source, GLenum type, const char* name)`
-    - [ ] Call glCreateShader(type)
-    - [ ] Call glShaderSource()
-    - [ ] Call glCompileShader()
-    - [ ] Check glGetShaderiv(GL_COMPILE_STATUS)
-    - [ ] If failed, get log with glGetShaderInfoLog()
-    - [ ] Log error and return 0
-  - [ ] `GLuint LinkProgram(GLuint vs, GLuint fs, const char* name)`
-    - [ ] Call glCreateProgram()
-    - [ ] Call glAttachShader() for both shaders
-    - [ ] Call glLinkProgram()
-    - [ ] Check glGetProgramiv(GL_LINK_STATUS)
-    - [ ] If failed, get log and report error
-    - [ ] Call glDeleteShader() for temporary shader objects
-    - [ ] Return program
-- [ ] Test: Methods compile
+### 2.5: Implement Shader Loading ✅
+- [x] Add shader loading methods to OpenGLRenderer
+- [x] Implement `LoadShaderFile(const std::string& filename)`
+  - [x] Opens file from shaders/ directory using std::ifstream
+  - [x] Reads entire contents using std::stringstream
+  - [x] Returns shader source as string
+  - [x] Logs error if file not found
+  - [x] Logs successful load with file size
+- [x] Implement `CompileShader(const char* source, GLenum type, const char* name)`
+  - [x] Creates shader object with glCreateShader()
+  - [x] Sets source with glShaderSource()
+  - [x] Compiles with glCompileShader()
+  - [x] Checks compilation status with glGetShaderiv(GL_COMPILE_STATUS)
+  - [x] Retrieves and logs compilation errors with glGetShaderInfoLog()
+  - [x] Returns 0 on failure, shader ID on success
+  - [x] Logs successful compilation
+- [x] Implement `LinkProgram(GLuint vs, GLuint fs, const char* name)`
+  - [x] Creates program object with glCreateProgram()
+  - [x] Attaches both vertex and fragment shaders with glAttachShader()
+  - [x] Links program with glLinkProgram()
+  - [x] Checks link status with glGetProgramiv(GL_LINK_STATUS)
+  - [x] Retrieves and logs link errors with glGetProgramInfoLog()
+  - [x] Detaches and deletes shader objects after linking
+  - [x] Returns 0 on failure, program ID on success
+  - [x] Logs successful link
+- [x] Test: Methods compile successfully ✅
+
+**Implementation details:**
+- All three methods are private helper functions in OpenGLRenderer
+- Error handling uses SDL_Log for consistent logging
+- Shader objects are automatically cleaned up after linking
+- Returns 0 on any error for easy error checking
 
 ### 2.6: Load and Compile Shaders
 - [ ] Update OpenGLRenderer::Init()
@@ -772,16 +781,17 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 ## Progress Tracking
 
 **Phase 1:** ✅ Complete (Build system, foundation, first successful build)
-**Phase 2:** 🔄 In Progress (2.1-2.4 complete: Sentinel & Effect shaders converted)
+**Phase 2:** 🔄 In Progress (2.1-2.5 complete: Shaders converted + loading implemented)
 **Phase 3:** ⬜ Not Started (Model rendering)
 **Phase 4:** ⬜ Not Started (Game integration)
 **Phase 5:** ⬜ Not Started (Effects & polish)
 **Phase 6:** ⬜ Not Started (Testing & debug)
 
-**Overall Progress:** ~25% Complete (Phase 1 complete + Phase 2 shader conversion done)
+**Overall Progress:** ~28% Complete (Phase 1 complete + Phase 2 nearly complete)
 **Executable Status:** Builds successfully ✅ (1.4 MB)
 **Shaders Status:** Sentinel & Effect shaders converted to GLSL ✅
-**Next Milestone:** Implement shader loading and compilation (Phase 2.5-2.6)
+**Shader Loading:** LoadShaderFile, CompileShader, LinkProgram implemented ✅
+**Next Milestone:** Load and compile shaders at runtime (Phase 2.6)
 
 ---
 

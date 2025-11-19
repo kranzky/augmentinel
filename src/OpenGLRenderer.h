@@ -30,6 +30,11 @@ public:
     void GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const override;
 
 private:
+    // Shader loading helpers
+    std::string LoadShaderFile(const std::string& filename);
+    GLuint CompileShader(const char* source, GLenum type, const char* name);
+    GLuint LinkProgram(GLuint vs, GLuint fs, const char* name);
+
     int m_width;
     int m_height;
 
