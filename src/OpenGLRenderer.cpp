@@ -195,6 +195,13 @@ bool OpenGLRenderer::Init() {
 
     SDL_Log("OpenGLRenderer: Test triangle created successfully");
 
+    // Phase 2.11: Initialize camera to a good starting position
+    // Position camera back from origin so we can see the test triangle at (0, 0, 5)
+    m_camera.SetPosition(XMFLOAT3(0.0f, 0.0f, -5.0f));  // 5 units back
+    m_camera.SetRotation(XMFLOAT3(0.0f, 0.0f, 0.0f));   // Looking forward (+Z)
+
+    SDL_Log("OpenGLRenderer: Camera initialized at (0, 0, -5)");
+
     return true;
 }
 
@@ -202,20 +209,32 @@ void OpenGLRenderer::BeginScene() {
     // Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    // Phase 2.11: Set up view and projection matrices
+    XMMATRIX view = m_camera.GetViewMatrix();
+    float aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
+    XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspectRatio, NEAR_CLIP, FAR_CLIP);
+    m_mViewProjection = view * proj;
+
+    // Store camera position in vertex constants for lighting calculations
+    XMFLOAT3 eyePos = m_camera.GetPosition();
+    m_vertexConstants.EyePos = eyePos;
+
     // Update uniform buffers with current constant values
     // These get updated before each frame in case the game has changed them
     UpdateVertexConstants();
     UpdatePixelConstants();
-
-    // Phase 2.9+: Set up view/projection matrices
 }
 
 void OpenGLRenderer::Render(IGame* pGame) {
-    // Phase 2.10: Render test triangle
+    // Phase 2.10-2.11: Render test triangle with 3D projection
 
-    // Set up identity matrices for testing
-    m_vertexConstants.WVP = XMMatrixIdentity();
-    m_vertexConstants.W = XMMatrixIdentity();
+    // Phase 2.11: Create world matrix - position triangle 5 units in front of camera
+    XMMATRIX world = XMMatrixTranslation(0.0f, 0.0f, 5.0f);
+
+    // Calculate final WVP matrix (World * View * Projection)
+    // IMPORTANT: Transpose for GLSL (DirectXMath is row-major, GLSL is column-major)
+    m_vertexConstants.WVP = XMMatrixTranspose(world * m_mViewProjection);
+    m_vertexConstants.W = XMMatrixTranspose(world);
 
     // Set palette colors (RGB for vertices with palette indices 0, 1, 2)
     m_vertexConstants.Palette[0] = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);  // Red
