@@ -165,7 +165,8 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sounds)
 endif()
 
 # Copy shaders directory
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # Print configuration info
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

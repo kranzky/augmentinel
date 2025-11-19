@@ -1,8 +1,8 @@
 # Augmentinel Porting TODO List
 
-**Status:** Phase 1 Complete ✅
+**Status:** Phase 1 Complete ✅, Phase 2.1-2.3 Complete ✅
 **Current Phase:** Phase 2 (Shader Pipeline)
-**Last Updated:** 2025-11-18
+**Last Updated:** 2025-11-19
 
 Use this file to track progress through the SDL2+OpenGL port. Check off items as you complete them.
 
@@ -253,7 +253,7 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** In Progress (2.1 complete)
+**Status:** In Progress (2.1-2.3 complete ✅)
 **Prerequisites:** Phase 1 complete ✅
 
 ### 2.1: Test Basic Execution ✅
@@ -278,62 +278,44 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 **Phase 2 Strategy:** Focus on Sentinel and Effect shaders first (non-VR gameplay)
 
-### 2.2: Convert Sentinel Vertex Shader
-- [ ] Read existing `shaders/Sentinel_VS.hlsl`
-  - [ ] Document cbuffer structure
-  - [ ] Note input/output semantics
-- [ ] Create `shaders/Sentinel.vert`
-- [ ] Add `#version 330 core`
-- [ ] Convert vertex input semantics to layout locations
-  - [ ] `layout(location = 0) in vec3 a_position;`
-  - [ ] `layout(location = 1) in vec3 a_normal;`
-  - [ ] `layout(location = 2) in vec4 a_color;`  // Note: uint32 color needs unpacking
-  - [ ] `layout(location = 3) in vec2 a_texcoord;`
-- [ ] Convert cbuffer to uniform block
-  - [ ] `layout(std140, binding = 0) uniform VertexConstants { ... }`
-  - [ ] Verify alignment matches C++ struct (std140 padding rules)
-  - [ ] Add 64-byte aligned matrices
-  - [ ] Add palette array
-- [ ] Convert output semantics to out variables
-  - [ ] `out vec4 v_color;`
-  - [ ] `out vec3 v_position;` (if needed for lighting)
-  - [ ] `out vec3 v_normal;` (if needed)
-  - [ ] `out vec2 v_texcoord;`
-- [ ] Convert main() function
-  - [ ] Change `mul(v, M)` to `M * v` (column-major)
-  - [ ] Change `saturate(x)` to `clamp(x, 0.0, 1.0)`
-  - [ ] Change `lerp(a, b, t)` to `mix(a, b, t)`
-  - [ ] Change `frac()` to `fract()`
-- [ ] Port palette lookup and color indexing
-  - [ ] Unpack uint32 color to index
-  - [ ] Look up in Palette array
-- [ ] Port lighting calculations from HLSL
-  - [ ] Directional light (sun)
-  - [ ] Ambient term
-  - [ ] Per-vertex vs per-pixel decision
-- [ ] Test: Shader syntax check with `glslangValidator` if available
+### 2.2: Convert Sentinel Vertex Shader ✅
+- [x] Read existing `shaders/Sentinel_VS.hlsl`
+- [x] Create `shaders/SharedConstants.h` with PALETTE_SIZE constant
+- [x] Create `shaders/Sentinel.vert` with GLSL #version 330 core
+- [x] Convert vertex input semantics to layout locations (position, normal, colour, texcoord)
+- [x] Convert cbuffer to uniform block (std140, binding = 0)
+- [x] Convert output semantics to out variables (v_colour, v_texcoord)
+- [x] Convert main() function:
+  - [x] Changed `mul(v, M)` to `M * v` (matrices will be transposed when uploaded)
+  - [x] Changed `saturate(x)` to `clamp(x, 0.0, 1.0)`
+  - [x] Changed `lerp(a, b, t)` to `mix(a, b, t)`
+- [x] Port palette lookup using uint colour index
+- [x] Port lighting calculations (2 directional lights + ambient, backface handling)
+- [x] Port fog calculation (exponential distance fog)
+- [x] Port z_fade effect for object creation/absorption
+- [x] Test: Build succeeded, shaders copied to build directory
 
-### 2.3: Convert Sentinel Fragment Shader
-- [ ] Locate original pixel shader
-- [ ] Create `shaders/Sentinel.frag`
-- [ ] Add `#version 330 core`
-- [ ] Convert input from vertex shader: `in vec4 v_color;`, etc.
-- [ ] Convert uniform block for PixelConstants
-  - [ ] `layout(std140, binding = 1) uniform PixelConstants { ... }`
-  - [ ] dissolved, time, view_dissolve, view_desaturate, view_fade
-- [ ] Convert output: `out vec4 FragColor;`
-- [ ] Port dissolve/noise logic
-  - [ ] Copy `rnd()` hash function
-  - [ ] Calculate dissolve threshold
-  - [ ] Convert `clip()` to `if (alpha < threshold) discard;`
-- [ ] Port view effects (if in pixel shader)
-  - [ ] Dissolve noise
-  - [ ] Desaturation
-  - [ ] Fade to black
-- [ ] Final color output: `FragColor = color;`
-- [ ] Test: Shader syntax check
+**Key conversions:**
+- HLSL row-major matrices → GLSL column-major (matrices transposed on upload)
+- uint colour index used directly in GLSL (no unpacking needed)
+- All intrinsics converted (saturate→clamp, lerp→mix)
 
-**Note:** If Sentinel shaders are combined or simple, may be minimal work. Check original implementation first.
+### 2.3: Convert Sentinel Fragment Shader ✅
+- [x] Read existing `shaders/Sentinel_PS.hlsl`
+- [x] Create `shaders/Sentinel.frag` with GLSL #version 330 core
+- [x] Convert input from vertex shader: `in vec4 v_colour;`, `in vec2 v_texcoord;`
+- [x] Convert uniform block for PixelConstants (std140, binding = 1)
+- [x] Convert output: `out vec4 FragColor;`
+- [x] Port dissolve/noise logic:
+  - [x] Copy `rnd()` hash function (frac→fract, fmod→mod)
+  - [x] Calculate dissolve threshold
+  - [x] Convert `clip()` to `if (random_value - dissolved < 0.0) discard;`
+- [x] Test: Build succeeded, shaders copied to build directory
+
+**Key conversions:**
+- HLSL `clip(x)` discards if x < 0, converted to explicit if/discard
+- HLSL `frac()` → GLSL `fract()`
+- HLSL `fmod()` → GLSL `mod()`
 
 ### 2.4: Convert Effect Shaders (Post-Processing)
 - [ ] Create `shaders/Effect.vert`
@@ -787,15 +769,16 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 ## Progress Tracking
 
 **Phase 1:** ✅ Complete (Build system, foundation, first successful build)
-**Phase 2:** ⬜ Not Started (Shader pipeline)
+**Phase 2:** 🔄 In Progress (2.1-2.3 complete: Sentinel shaders converted)
 **Phase 3:** ⬜ Not Started (Model rendering)
 **Phase 4:** ⬜ Not Started (Game integration)
 **Phase 5:** ⬜ Not Started (Effects & polish)
 **Phase 6:** ⬜ Not Started (Testing & debug)
 
-**Overall Progress:** ~15% Complete (Phase 1 of 6)
+**Overall Progress:** ~20% Complete (Phase 1 complete + Phase 2 started)
 **Executable Status:** Builds successfully ✅ (1.4 MB)
-**Next Milestone:** Get test triangle rendering with shaders (Phase 2.10)
+**Shaders Status:** Sentinel vertex & fragment shaders converted to GLSL ✅
+**Next Milestone:** Implement shader loading and compilation (Phase 2.5-2.6)
 
 ---
 
