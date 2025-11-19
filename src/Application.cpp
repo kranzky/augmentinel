@@ -109,9 +109,11 @@ void Application::Run(bool dumpScreenshot) {
         lastTime = currentTime;
 
         // Update game
-        if (m_pGame) {
-            m_pGame->Frame(elapsed);
-        }
+        // TODO Phase 3: Re-enable game updates when ready for full game integration
+        // For now, skip game updates to prevent it from controlling the test camera
+        // if (m_pGame) {
+        //     m_pGame->Frame(elapsed);
+        // }
 
         // Render
         if (m_pRenderer) {

@@ -219,9 +219,8 @@ void OpenGLRenderer::BeginScene() {
     XMFLOAT3 eyePos = m_camera.GetPosition();
     m_vertexConstants.EyePos = eyePos;
 
-    // Update uniform buffers with current constant values
-    // These get updated before each frame in case the game has changed them
-    UpdateVertexConstants();
+    // Update pixel constants (view effects)
+    // Vertex constants will be updated in Render() after WVP is set
     UpdatePixelConstants();
 }
 
