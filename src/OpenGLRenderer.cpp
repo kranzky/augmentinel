@@ -148,8 +148,12 @@ void OpenGLRenderer::BeginScene() {
     // Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Phase 1: Just clear screen
-    // Phase 2+: Set up view/projection matrices, update uniforms
+    // Update uniform buffers with current constant values
+    // These get updated before each frame in case the game has changed them
+    UpdateVertexConstants();
+    UpdatePixelConstants();
+
+    // Phase 2.9+: Set up view/projection matrices
 }
 
 void OpenGLRenderer::Render(IGame* pGame) {
@@ -324,4 +328,18 @@ GLuint OpenGLRenderer::LinkProgram(GLuint vs, GLuint fs, const char* name) {
 
     SDL_Log("Linked shader program: %s", name);
     return program;
+}
+
+// Uniform buffer update methods
+
+void OpenGLRenderer::UpdateVertexConstants() {
+    glBindBuffer(GL_UNIFORM_BUFFER, m_vertexConstantsUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(VertexConstants), &m_vertexConstants);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+void OpenGLRenderer::UpdatePixelConstants() {
+    glBindBuffer(GL_UNIFORM_BUFFER, m_pixelConstantsUBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PixelConstants), &m_pixelConstants);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

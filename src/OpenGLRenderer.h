@@ -35,6 +35,10 @@ private:
     GLuint CompileShader(const char* source, GLenum type, const char* name);
     GLuint LinkProgram(GLuint vs, GLuint fs, const char* name);
 
+    // Uniform buffer update helpers
+    void UpdateVertexConstants();
+    void UpdatePixelConstants();
+
     int m_width;
     int m_height;
 

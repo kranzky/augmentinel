@@ -1,7 +1,7 @@
 # Augmentinel Porting TODO List
 
-**Status:** Phase 1 Complete ✅, Phase 2.1-2.7 Complete ✅
-**Current Phase:** Phase 2 (Shader Pipeline - Uniform Buffers Created!)
+**Status:** Phase 1 Complete ✅, Phase 2.1-2.8 Complete ✅
+**Current Phase:** Phase 2 (Shader Pipeline - Ready for Test Triangle!)
 **Last Updated:** 2025-11-19
 
 Use this file to track progress through the SDL2+OpenGL port. Check off items as you complete them.
@@ -253,7 +253,7 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** In Progress (2.1-2.7 complete ✅ - UBOs created!)
+**Status:** In Progress (2.1-2.8 complete ✅ - Uniforms updating!)
 **Prerequisites:** Phase 1 complete ✅
 
 ### 2.1: Test Basic Execution ✅
@@ -451,17 +451,22 @@ INFO: OpenGLRenderer: Uniform buffers created successfully
 - [x] Integrated stb_image_write.h for PNG screenshot capture
 - [x] Screenshot functionality verified (1600x900 PNG, 42kB)
 
-### 2.8: Update Uniform Buffers
-- [ ] Create UpdateVertexConstants() method
-  ```cpp
-  void UpdateVertexConstants() {
-      glBindBuffer(GL_UNIFORM_BUFFER, m_vertexConstantsUBO);
-      glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(VertexConstants), &m_vertexConstants);
-  }
-  ```
-- [ ] Create UpdatePixelConstants() method similarly
-- [ ] Call from BeginScene() and/or before draw calls
-- [ ] Test: Methods compile
+### 2.8: Update Uniform Buffers ✅
+- [x] Create UpdateVertexConstants() method
+  - [x] Binds vertex constants UBO
+  - [x] Uploads m_vertexConstants with glBufferSubData
+  - [x] Unbinds buffer
+- [x] Create UpdatePixelConstants() method similarly
+  - [x] Binds pixel constants UBO
+  - [x] Uploads m_pixelConstants with glBufferSubData
+  - [x] Unbinds buffer
+- [x] Call from BeginScene() before rendering each frame
+- [x] Test: Methods compile and run without errors ✅
+
+**Implementation:**
+- Methods added to OpenGLRenderer.cpp (lines 331-341)
+- Called from BeginScene() to update uniforms each frame
+- Screenshot test confirms no rendering issues
 
 ### 2.9: Create Test Triangle
 - [ ] In OpenGLRenderer::Init(), create test data
@@ -823,19 +828,19 @@ INFO: OpenGLRenderer: Uniform buffers created successfully
 ## Progress Tracking
 
 **Phase 1:** ✅ Complete (Build system, foundation, first successful build)
-**Phase 2:** 🔄 In Progress (2.1-2.7 complete: UBOs created successfully!)
+**Phase 2:** 🔄 In Progress (2.1-2.8 complete: Uniform buffers updating!)
 **Phase 3:** ⬜ Not Started (Model rendering)
 **Phase 4:** ⬜ Not Started (Game integration)
 **Phase 5:** ⬜ Not Started (Effects & polish)
 **Phase 6:** ⬜ Not Started (Testing & debug)
 
-**Overall Progress:** ~35% Complete (Phase 1 complete + Phase 2 progressing well)
+**Overall Progress:** ~37% Complete (Phase 1 complete + Phase 2 nearing completion)
 **Executable Status:** Builds successfully ✅ (1.4 MB)
 **Shaders Status:** Sentinel & Effect shaders compiled and linked ✅
 **Shader Programs:** Sentinel (ID: 3), Effect (ID: 4) ✅
-**UBO Status:** Vertex constants (480 bytes), Pixel constants (32 bytes) ✅
+**UBO Status:** Created, bound, and updating each frame ✅
 **Screenshot Tool:** `./Augmentinel --screenshot` saves screenshot.png and exits ✅
-**Next Milestone:** Implement uniform buffer update methods (Phase 2.8)
+**Next Milestone:** Create and render test triangle (Phase 2.9-2.10)
 
 ---
 
