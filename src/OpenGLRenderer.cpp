@@ -211,8 +211,49 @@ void OpenGLRenderer::BeginScene() {
 }
 
 void OpenGLRenderer::Render(IGame* pGame) {
-    // Phase 1: Empty - just clear screen
-    // Phase 2+: Use shader program and render game objects
+    // Phase 2.10: Render test triangle
+
+    // Set up identity matrices for testing
+    m_vertexConstants.WVP = XMMatrixIdentity();
+    m_vertexConstants.W = XMMatrixIdentity();
+
+    // Set palette colors (RGB for vertices with palette indices 0, 1, 2)
+    m_vertexConstants.Palette[0] = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);  // Red
+    m_vertexConstants.Palette[1] = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);  // Green
+    m_vertexConstants.Palette[2] = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);  // Blue
+
+    // Update vertex constants UBO with new values
+    UpdateVertexConstants();
+
+    // Bind shader program
+    glUseProgram(m_sentinelProgram);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: Failed to bind shader program: 0x%x", err);
+        return;
+    }
+
+    // Bind VAO
+    glBindVertexArray(m_vao);
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: Failed to bind VAO: 0x%x", err);
+        return;
+    }
+
+    // Draw triangle
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: Failed to draw triangle: 0x%x", err);
+        return;
+    }
+
+    // Unbind
+    glBindVertexArray(0);
+    glUseProgram(0);
+
+    // Phase 3+: Render game objects
     // pGame->Render(this);
 }
 
