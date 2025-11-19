@@ -10,6 +10,9 @@ OpenGLRenderer::~OpenGLRenderer() {
     if (m_vao) {
         glDeleteVertexArrays(1, &m_vao);
     }
+    if (m_testVBO) {
+        glDeleteBuffers(1, &m_testVBO);
+    }
     if (m_sentinelProgram) {
         glDeleteProgram(m_sentinelProgram);
     }
@@ -140,6 +143,57 @@ bool OpenGLRenderer::Init() {
     }
 
     SDL_Log("OpenGLRenderer: Uniform buffers created successfully");
+
+    // Create test triangle (Phase 2.9)
+    SDL_Log("OpenGLRenderer: Creating test triangle...");
+
+    // Define test triangle vertices (RGB triangle for testing)
+    Vertex testVerts[3] = {
+        Vertex(-0.5f, -0.5f, 0.0f, 0),  // Bottom-left (will use palette[0] - red)
+        Vertex( 0.5f, -0.5f, 0.0f, 1),  // Bottom-right (will use palette[1] - green)
+        Vertex( 0.0f,  0.5f, 0.0f, 2),  // Top (will use palette[2] - blue)
+    };
+
+    // Create and upload vertex buffer
+    glGenBuffers(1, &m_testVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_testVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(testVerts), testVerts, GL_STATIC_DRAW);
+    SDL_Log("  - Test VBO created: %u (%zu bytes)", m_testVBO, sizeof(testVerts));
+
+    // Create VAO and configure vertex attributes
+    glGenVertexArrays(1, &m_vao);
+    glBindVertexArray(m_vao);
+
+    // Attribute 0: position (vec3)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
+
+    // Attribute 1: normal (vec3)
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+    // Attribute 2: color (uint)
+    glEnableVertexAttribArray(2);
+    glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(Vertex), (void*)offsetof(Vertex, colour));
+
+    // Attribute 3: texcoord (vec2)
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
+
+    // Unbind VAO
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    SDL_Log("  - VAO created: %u", m_vao);
+
+    // Check for errors
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: OpenGL error during test triangle creation: 0x%x", err);
+        return false;
+    }
+
+    SDL_Log("OpenGLRenderer: Test triangle created successfully");
 
     return true;
 }

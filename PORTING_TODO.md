@@ -468,33 +468,31 @@ INFO: OpenGLRenderer: Uniform buffers created successfully
 - Called from BeginScene() to update uniforms each frame
 - Screenshot test confirms no rendering issues
 
-### 2.9: Create Test Triangle
-- [ ] In OpenGLRenderer::Init(), create test data
-  ```cpp
-  Vertex testVerts[3] = {
-      Vertex(-0.5f, -0.5f, 0.0f, 0xFF0000FF), // Red
-      Vertex( 0.5f, -0.5f, 0.0f, 0xFF00FF00), // Green
-      Vertex( 0.0f,  0.5f, 0.0f, 0xFFFF0000), // Blue
-  };
-  glGenBuffers(1, &m_testVBO);
-  glBindBuffer(GL_ARRAY_BUFFER, m_testVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(testVerts), testVerts, GL_STATIC_DRAW);
-  ```
-- [ ] Create VAO and set up attributes
-  ```cpp
-  glGenVertexArrays(1, &m_vao);
-  glBindVertexArray(m_vao);
-  glEnableVertexAttribArray(0); // position
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
-  glEnableVertexAttribArray(1); // normal
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-  glEnableVertexAttribArray(2); // color
-  glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(Vertex), (void*)offsetof(Vertex, colour));
-  glEnableVertexAttribArray(3); // texcoord
-  glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
-  glBindVertexArray(0);
-  ```
-- [ ] Test: VAO created without errors
+### 2.9: Create Test Triangle ✅
+- [x] In OpenGLRenderer::Init(), create test triangle data
+  - [x] Created 3 vertices (bottom-left, bottom-right, top)
+  - [x] Vertices use palette indices 0, 1, 2 for RGB colors
+  - [x] Created VBO with glGenBuffers/glBufferData (108 bytes)
+- [x] Create VAO and configure all vertex attributes
+  - [x] Attribute 0: position (vec3, GL_FLOAT)
+  - [x] Attribute 1: normal (vec3, GL_FLOAT)
+  - [x] Attribute 2: color (uint, GL_UNSIGNED_INT) - uses glVertexAttribIPointer
+  - [x] Attribute 3: texcoord (vec2, GL_FLOAT)
+  - [x] Proper unbinding after setup
+- [x] Test: VAO and VBO created without errors ✅
+
+**Test Results:**
+```
+INFO: OpenGLRenderer: Creating test triangle...
+INFO:   - Test VBO created: 3 (108 bytes)
+INFO:   - VAO created: 1
+INFO: OpenGLRenderer: Test triangle created successfully
+```
+
+**Implementation Details:**
+- Test VBO: ID 3 (3 vertices × 36 bytes = 108 bytes)
+- VAO: ID 1
+- Cleanup added to destructor (glDeleteBuffers for VBO)
 
 ### 2.10: Render Test Triangle
 - [ ] Update OpenGLRenderer::Render()

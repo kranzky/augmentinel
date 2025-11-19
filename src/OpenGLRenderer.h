@@ -44,6 +44,7 @@ private:
 
     // OpenGL objects (will be populated in Phase 2)
     GLuint m_vao{0};
+    GLuint m_testVBO{0};  // Test triangle vertex buffer (Phase 2.9)
     GLuint m_sentinelProgram{0};
     GLuint m_effectProgram{0};
     GLuint m_vertexConstantsUBO{0};
