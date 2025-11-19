@@ -39,18 +39,24 @@ The Windows code uses the Win32 and D3D11 APIs.
 
 A cross-platform port using SDL2 and OpenGL is currently in development.
 
-**Status**: Phase 1 Complete ✅, Phase 2 Progressing (2.1-2.7 complete) ✅
+**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅ 🎉
 
-**Current Phase**: Phase 2 - Shader Pipeline (Shaders converted, UBOs created)
+**Current Phase**: Phase 3 - Model Rendering
 
 **Recent Milestones**:
 - ✅ SDL2 + OpenGL 3.3 build system working
 - ✅ HLSL shaders converted to GLSL (Sentinel & Effect)
-- ✅ Shader programs compiled and linked (IDs: 3, 4)
-- ✅ Uniform buffers (UBOs) created and bound
+- ✅ Shader programs compiled and linked successfully
+- ✅ Uniform buffers (UBOs) created and updating correctly
+- ✅ Test triangle renders with perspective projection
+- ✅ Camera system operational (view + projection matrices)
+- ✅ Full 3D rendering pipeline functional
 - ✅ Screenshot tool for automated testing (`--screenshot`)
 
-**Next**: Implement uniform buffer update methods, then render test triangle
+**Next**: Phase 3 - Upload and render game models from Spectrum emulator
+
+**Known Issues**:
+- Game updates temporarily disabled during Phase 2 testing (will re-enable in Phase 3)
 
 #### Prerequisites
 

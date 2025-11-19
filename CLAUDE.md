@@ -18,7 +18,8 @@ When working on this codebase, check:
 
 ### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
 
-**Status**: Phase 2.7 complete (shaders converted, UBOs created)
+**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅ 🎉
+**Current**: Phase 3 - Model Rendering
 
 **Build:**
 ```bash
@@ -234,17 +235,29 @@ These components work on both platforms with minimal changes:
 
 See `PORTING_TODO.md` for detailed checklist. Summary:
 
-**Phase 1 (Complete):** Build system, foundation, stubs
-**Phase 2 (In Progress - 2.7/11):**
+**Phase 1 (Complete ✅):** Build system, foundation, stubs
+**Phase 2 (Complete ✅):** Shader Pipeline - Full 3D Rendering Operational!
 - ✅ Shaders converted (HLSL → GLSL)
 - ✅ Shader programs compiled and linked
-- ✅ Uniform buffers created and bound
-- ⏳ Uniform buffer updates (next)
-- ⏳ Test triangle rendering
-- ⏳ Camera and projection setup
+- ✅ Uniform buffers created and updating
+- ✅ Test triangle renders with correct colors
+- ✅ Camera and projection matrices working
+- ✅ Perspective transformation functional
+- ✅ Matrix transposition (row-major → column-major)
+
+**Phase 3 (Current):** Model Rendering
+- Upload game models to GPU (VBO/IBO)
+- Implement DrawModel() to render from Spectrum memory
+- Integrate with Augmentinel game logic
+- Re-enable game updates
 
 **Future Phases:**
-- Phase 3: Model rendering
 - Phase 4: Game integration (audio, input, settings)
 - Phase 5: Effects & polish
 - Phase 6: Testing & debugging
+
+**Important Notes for Phase 3:**
+- Game updates (`m_pGame->Frame()`) currently disabled to prevent camera conflicts
+- Test camera at (0, 0, -5) for shader pipeline verification
+- Re-enable game updates when implementing DrawModel() in Phase 3
+- Model class has Windows-specific D3D11 members that need conditional compilation
