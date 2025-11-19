@@ -1,7 +1,7 @@
 # Augmentinel Porting TODO List
 
-**Status:** Phase 1 Complete ✅, Phase 2.1-2.5 Complete ✅
-**Current Phase:** Phase 2 (Shader Pipeline)
+**Status:** Phase 1 Complete ✅, Phase 2.1-2.6 Complete ✅
+**Current Phase:** Phase 2 (Shader Pipeline - Nearly Complete!)
 **Last Updated:** 2025-11-19
 
 Use this file to track progress through the SDL2+OpenGL port. Check off items as you complete them.
@@ -253,7 +253,7 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 
 ## Phase 2: Shader Pipeline (2-3 days)
 
-**Status:** In Progress (2.1-2.5 complete ✅)
+**Status:** In Progress (2.1-2.6 complete ✅ - Shaders loading!)
 **Prerequisites:** Phase 1 complete ✅
 
 ### 2.1: Test Basic Execution ✅
@@ -374,22 +374,48 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 - Shader objects are automatically cleaned up after linking
 - Returns 0 on any error for easy error checking
 
-### 2.6: Load and Compile Shaders
-- [ ] Update OpenGLRenderer::Init()
-  - [ ] Load Sentinel vertex shader source
-  - [ ] Load Sentinel fragment shader source
-  - [ ] Compile vertex shader
-  - [ ] Check for compilation errors
-  - [ ] Compile fragment shader
-  - [ ] Check for compilation errors
-  - [ ] Link into m_sentinelProgram
-  - [ ] Check for link errors
-  - [ ] Store program ID
-  - [ ] Repeat for Effect shaders → m_effectProgram
-- [ ] Test: Build and run
-  - [ ] Check console for shader compilation logs
-  - [ ] Verify no errors
-  - [ ] If errors, fix shader syntax
+### 2.6: Load and Compile Shaders ✅
+- [x] Fixed GLSL shader compatibility for OpenGL 3.3
+  - [x] Removed `#include` directives (not supported in GLSL)
+  - [x] Inlined PALETTE_SIZE constant directly in Sentinel.vert
+  - [x] Removed `binding` qualifiers from uniform blocks (OpenGL 4.2+ feature)
+  - [x] Updated to use `layout(std140)` without binding specifier
+- [x] Update OpenGLRenderer::Init()
+  - [x] Load Sentinel vertex shader source (2960 bytes)
+  - [x] Load Sentinel fragment shader source (1056 bytes)
+  - [x] Compile vertex shader with error checking
+  - [x] Compile fragment shader with error checking
+  - [x] Link into m_sentinelProgram (program ID: 3)
+  - [x] Load Effect vertex shader source (665 bytes)
+  - [x] Load Effect fragment shader source (1960 bytes)
+  - [x] Compile Effect shaders with error checking
+  - [x] Link into m_effectProgram (program ID: 4)
+  - [x] Log success with program IDs
+- [x] Test: Build and run ✅
+  - [x] Console shows successful shader compilation logs
+  - [x] All shaders compiled without errors
+  - [x] All programs linked successfully
+  - [x] Application initializes and runs correctly
+
+**Test Results:**
+```
+INFO: OpenGLRenderer: Initializing shader pipeline...
+INFO: Loaded shader file: shaders/Sentinel.vert (2960 bytes)
+INFO: Loaded shader file: shaders/Sentinel.frag (1056 bytes)
+INFO: Compiled shader: Sentinel.vert
+INFO: Compiled shader: Sentinel.frag
+INFO: Linked shader program: Sentinel
+INFO: Loaded shader file: shaders/Effect.vert (665 bytes)
+INFO: Loaded shader file: shaders/Effect.frag (1960 bytes)
+INFO: Compiled shader: Effect.vert
+INFO: Compiled shader: Effect.frag
+INFO: Linked shader program: Effect
+INFO: OpenGLRenderer: Shader pipeline initialized successfully
+INFO:   - Sentinel program: 3
+INFO:   - Effect program: 4
+```
+
+**Note:** Uniform block bindings will be set programmatically in Phase 2.7 using glUniformBlockBinding()
 
 ### 2.7: Create Uniform Buffers (UBOs)
 - [ ] In OpenGLRenderer::Init()
@@ -781,17 +807,17 @@ Use this file to track progress through the SDL2+OpenGL port. Check off items as
 ## Progress Tracking
 
 **Phase 1:** ✅ Complete (Build system, foundation, first successful build)
-**Phase 2:** 🔄 In Progress (2.1-2.5 complete: Shaders converted + loading implemented)
+**Phase 2:** 🔄 In Progress (2.1-2.6 complete: Shaders compiling successfully!)
 **Phase 3:** ⬜ Not Started (Model rendering)
 **Phase 4:** ⬜ Not Started (Game integration)
 **Phase 5:** ⬜ Not Started (Effects & polish)
 **Phase 6:** ⬜ Not Started (Testing & debug)
 
-**Overall Progress:** ~28% Complete (Phase 1 complete + Phase 2 nearly complete)
+**Overall Progress:** ~32% Complete (Phase 1 complete + Phase 2 mostly complete)
 **Executable Status:** Builds successfully ✅ (1.4 MB)
-**Shaders Status:** Sentinel & Effect shaders converted to GLSL ✅
-**Shader Loading:** LoadShaderFile, CompileShader, LinkProgram implemented ✅
-**Next Milestone:** Load and compile shaders at runtime (Phase 2.6)
+**Shaders Status:** Sentinel & Effect shaders compiled and linked ✅
+**Shader Programs:** Sentinel (ID: 3), Effect (ID: 4) ✅
+**Next Milestone:** Create uniform buffers (UBOs) for shader constants (Phase 2.7)
 
 ---
 

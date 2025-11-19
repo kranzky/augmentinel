@@ -1,6 +1,7 @@
 #version 330 core
 
-#include "SharedConstants.h"
+// Shared constants
+#define PALETTE_SIZE 20
 
 #define AMBIENT_INTENSITY 0.35
 #define BACK_FACE_INTENSITY (AMBIENT_INTENSITY / 2.0)
@@ -20,7 +21,7 @@ layout(location = 2) in uint a_colour;
 layout(location = 3) in vec2 a_texcoord;
 
 // Uniform block (must match C++ VertexConstants struct with std140 layout)
-layout(std140, binding = 0) uniform VertexConstants
+layout(std140) uniform VertexConstants
 {
     mat4 WVP;                       // 64 bytes (4x vec4)
     mat4 W;                         // 64 bytes (4x vec4)

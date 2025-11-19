@@ -4,7 +4,7 @@
 uniform sampler2D u_sceneTexture;
 
 // Uniform block for pixel constants (must match C++ PixelConstants struct)
-layout(std140, binding = 1) uniform PixelConstants
+layout(std140) uniform PixelConstants
 {
     float dissolved;        // 0.0 = fully visible, 1.0 = fully dissolved (for models)
     float noise;            // 0.0 <= noise < 1.0 (animated noise offset)

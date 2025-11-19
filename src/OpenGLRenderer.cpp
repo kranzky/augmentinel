@@ -25,7 +25,7 @@ OpenGLRenderer::~OpenGLRenderer() {
 }
 
 bool OpenGLRenderer::Init() {
-    // For Phase 1, just set up basic OpenGL state
+    // Set up basic OpenGL state
     glClearColor(0.1f, 0.2f, 0.3f, 1.0f);  // Dark blue background for testing
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -33,7 +33,60 @@ bool OpenGLRenderer::Init() {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    SDL_Log("OpenGLRenderer initialized");
+    SDL_Log("OpenGLRenderer: Initializing shader pipeline...");
+
+    // Load and compile Sentinel shaders
+    std::string sentinelVertSrc = LoadShaderFile("Sentinel.vert");
+    std::string sentinelFragSrc = LoadShaderFile("Sentinel.frag");
+
+    if (sentinelVertSrc.empty() || sentinelFragSrc.empty()) {
+        SDL_Log("ERROR: Failed to load Sentinel shader files");
+        return false;
+    }
+
+    GLuint sentinelVS = CompileShader(sentinelVertSrc.c_str(), GL_VERTEX_SHADER, "Sentinel.vert");
+    GLuint sentinelFS = CompileShader(sentinelFragSrc.c_str(), GL_FRAGMENT_SHADER, "Sentinel.frag");
+
+    if (sentinelVS == 0 || sentinelFS == 0) {
+        SDL_Log("ERROR: Failed to compile Sentinel shaders");
+        return false;
+    }
+
+    m_sentinelProgram = LinkProgram(sentinelVS, sentinelFS, "Sentinel");
+
+    if (m_sentinelProgram == 0) {
+        SDL_Log("ERROR: Failed to link Sentinel shader program");
+        return false;
+    }
+
+    // Load and compile Effect shaders
+    std::string effectVertSrc = LoadShaderFile("Effect.vert");
+    std::string effectFragSrc = LoadShaderFile("Effect.frag");
+
+    if (effectVertSrc.empty() || effectFragSrc.empty()) {
+        SDL_Log("ERROR: Failed to load Effect shader files");
+        return false;
+    }
+
+    GLuint effectVS = CompileShader(effectVertSrc.c_str(), GL_VERTEX_SHADER, "Effect.vert");
+    GLuint effectFS = CompileShader(effectFragSrc.c_str(), GL_FRAGMENT_SHADER, "Effect.frag");
+
+    if (effectVS == 0 || effectFS == 0) {
+        SDL_Log("ERROR: Failed to compile Effect shaders");
+        return false;
+    }
+
+    m_effectProgram = LinkProgram(effectVS, effectFS, "Effect");
+
+    if (m_effectProgram == 0) {
+        SDL_Log("ERROR: Failed to link Effect shader program");
+        return false;
+    }
+
+    SDL_Log("OpenGLRenderer: Shader pipeline initialized successfully");
+    SDL_Log("  - Sentinel program: %u", m_sentinelProgram);
+    SDL_Log("  - Effect program: %u", m_effectProgram);
+
     return true;
 }
 

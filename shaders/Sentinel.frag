@@ -1,7 +1,7 @@
 #version 330 core
 
 // Uniform block for pixel constants
-layout(std140, binding = 1) uniform PixelConstants
+layout(std140) uniform PixelConstants
 {
     float dissolved;    // 0.0 = fully visible, 1.0 = fully dissolved
     float noise;        // 0.0 <= noise < 1.0
