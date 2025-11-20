@@ -131,19 +131,38 @@ The screenshot tool renders one frame, saves `screenshot.png` (1600x900), and ex
 
 #### Controls
 
-R	        Create Robot
-B	        Create Boulder
-T	        Create Tree
-A	        Absorb Object
-Q	        Transfer to Robot
-H	        Hyperspace
-U	        U-turn
-Mouse Move	Pan View
-L Button	Absorb
-R Button	Transfer to Robot
-P / Pause	Pause Game
-TAB         Toggle Debug View
-Esc	Quit
+**Title Screen:**
+- Any Key - Continue to landscape selection
+- ESC - Quit game
+
+**Landscape Selection:**
+- RETURN / Left Click - Select landscape and start
+- LEFT / RIGHT Arrow - Navigate previous/next landscape
+- HOME / END - Jump to first/last landscape
+- PAGE UP / PAGE DOWN - Navigate by pages
+
+**In-Game:**
+- R - Create Robot
+- B / Right Click - Create Boulder
+- T - Create Tree
+- A / Left Click - Absorb Object
+- Q / Mouse Button X1 - Transfer to Robot
+- H - Hyperspace
+- U - U-turn
+- P / Pause - Pause Game
+- LEFT / RIGHT Arrow - Turn left/right
+- UP / DOWN Arrow - Look up/down
+- PAGE UP / PAGE DOWN - Turn 45 degrees left/right
+- Mouse Move - Free look (pan view)
+
+**Audio:**
+- M - Toggle music on/off
+- N - Toggle tunes on/off
+- + / - - Adjust music volume
+
+**Debug:**
+- TAB - Toggle debug overlay (FPS, frame time, draw calls)
+- ESC - Quit to desktop
 
 #### Current Limitations
 
