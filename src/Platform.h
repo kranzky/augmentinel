@@ -88,6 +88,19 @@ using namespace DirectX;
 #define VK_OEM_PLUS   SDLK_PLUS
 #define VK_OEM_MINUS  SDLK_MINUS
 
+// Letter keys (action bindings use uppercase, SDL uses lowercase keycodes)
+// Map uppercase ASCII to SDL lowercase keycodes
+#define VK_A          SDLK_a
+#define VK_B          SDLK_b
+#define VK_H          SDLK_h
+#define VK_M          SDLK_m
+#define VK_N          SDLK_n
+#define VK_P          SDLK_p
+#define VK_Q          SDLK_q
+#define VK_R          SDLK_r
+#define VK_T          SDLK_t
+#define VK_U          SDLK_u
+
 // SDL mouse button mappings
 #define VK_LBUTTON    (1000 + SDL_BUTTON_LEFT)
 #define VK_RBUTTON    (1000 + SDL_BUTTON_RIGHT)

@@ -773,13 +773,13 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
   - [x] Sentinels ✅
   - [x] Pedestals ✅
   - [x] Landscape tiles ✅
-- [ ] Test object creation (if input works)
-  - [ ] Tree creation shows model
-  - [ ] Boulder creation shows model
-  - [ ] Robot creation shows model
-- [ ] Test object absorption
-  - [ ] Dissolve effect visible
-  - [ ] Model disappears
+- [x] Test object creation (if input works) ✅
+  - [x] Tree creation shows model ✅
+  - [x] Boulder creation shows model ✅
+  - [x] Robot creation shows model ✅
+- [x] Test object absorption ✅
+  - [x] Dissolve effect visible ✅
+  - [x] Model disappears ✅
 
 **Phase 3 Complete Criteria:**
 - ✅ Landscape renders correctly

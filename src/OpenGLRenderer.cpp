@@ -235,8 +235,9 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
         return;
     }
 
-    // Upload if not already uploaded
-    if (!m_modelVBOs.count(&model)) {
+    // Upload if not already uploaded (using vertex buffer pointer as cache key)
+    const void* cacheKey = model.m_pVertices.get();
+    if (!m_modelVBOs.count(cacheKey)) {
         UploadModel(model);
     }
 
@@ -266,9 +267,9 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
     UpdateVertexConstants();
     UpdatePixelConstants();
 
-    // Bind buffers
-    glBindBuffer(GL_ARRAY_BUFFER, m_modelVBOs.at(&model));
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_modelIBOs.at(&model));
+    // Bind buffers (using vertex buffer pointer as cache key)
+    glBindBuffer(GL_ARRAY_BUFFER, m_modelVBOs.at(cacheKey));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_modelIBOs.at(cacheKey));
 
     // Set up vertex attributes (same layout as test triangle)
     // Attribute 0: position (vec3)
@@ -288,7 +289,7 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
     glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
 
     // Draw
-    size_t indexCount = m_modelIndexCounts.at(&model);
+    size_t indexCount = m_modelIndexCounts.at(cacheKey);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     m_drawCallCount++;
 
@@ -473,8 +474,12 @@ void OpenGLRenderer::UpdatePixelConstants() {
 }
 
 void OpenGLRenderer::UploadModel(const Model& model) {
+    // Use vertex buffer pointer as cache key (identifies unique geometry)
+    const void* cacheKey = model.m_pVertices.get();
+
     // Check if already uploaded
-    if (m_modelVBOs.count(&model)) {
+    if (m_modelVBOs.count(cacheKey)) {
+        // Already uploaded, skip
         return;
     }
 
@@ -488,7 +493,7 @@ void OpenGLRenderer::UploadModel(const Model& model) {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
                  vertices.data(), GL_STATIC_DRAW);
-    m_modelVBOs[&model] = vbo;
+    m_modelVBOs[cacheKey] = vbo;
 
     // Create IBO
     GLuint ibo;
@@ -496,8 +501,8 @@ void OpenGLRenderer::UploadModel(const Model& model) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
                  indices.data(), GL_STATIC_DRAW);
-    m_modelIBOs[&model] = ibo;
-    m_modelIndexCounts[&model] = indices.size();
+    m_modelIBOs[cacheKey] = ibo;
+    m_modelIndexCounts[cacheKey] = indices.size();
 
     // Unbind buffers
     glBindBuffer(GL_ARRAY_BUFFER, 0);

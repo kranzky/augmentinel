@@ -77,14 +77,14 @@ static std::vector<ActionBinding> action_bindings =
 	{ Action::LandscapePgUp,	{ VK_PRIOR },				"/actions/game/in/landscape_pgup" },
 	{ Action::LandscapePgDn,	{ VK_NEXT },				"/actions/game/in/landscape_pgdn" },
 	{ Action::Quit,				{ VK_ESCAPE },				"/actions/game/in/quit" },
-	{ Action::Pause,			{ 'P', VK_PAUSE },			"/actions/game/in/pause" },
-	{ Action::Absorb,			{ 'A', VK_LBUTTON },		"/actions/game/in/select" },
-	{ Action::Tree,				{ 'T' },					"/actions/game/in/tree"},
-	{ Action::Boulder,			{ 'B', VK_RBUTTON },		"/actions/game/in/boulder"},
-	{ Action::Robot,			{ 'R', VK_MBUTTON },		"/actions/game/in/robot"},
-	{ Action::Transfer,			{ 'Q', VK_XBUTTON1 },		"/actions/game/in/transfer" },
-	{ Action::Hyperspace,		{ 'H' },					"/actions/game/in/hyperspace" },
-	{ Action::U_Turn,			{ 'U' },					"/actions/game/in/u_turn" },
+	{ Action::Pause,			{ VK_P, VK_PAUSE },			"/actions/game/in/pause" },
+	{ Action::Absorb,			{ VK_A, VK_LBUTTON },		"/actions/game/in/select" },
+	{ Action::Tree,				{ VK_T },					"/actions/game/in/tree"},
+	{ Action::Boulder,			{ VK_B, VK_RBUTTON },		"/actions/game/in/boulder"},
+	{ Action::Robot,			{ VK_R, VK_MBUTTON },		"/actions/game/in/robot"},
+	{ Action::Transfer,			{ VK_Q, VK_XBUTTON1 },		"/actions/game/in/transfer" },
+	{ Action::Hyperspace,		{ VK_H },					"/actions/game/in/hyperspace" },
+	{ Action::U_Turn,			{ VK_U },					"/actions/game/in/u_turn" },
 	{ Action::ResetHMD,			{ VK_SPACE },				"/actions/game/in/reset_hmd" },
 	{ Action::SkyViewContinue,	{ VK_ANY },					"/actions/game/in/select" },
 	{ Action::Pose_LeftPointer,{},							"/actions/game/in/left_pointer" },
@@ -101,8 +101,8 @@ static std::vector<ActionBinding> action_bindings =
 	{ Action::Turn180,			{},							"/actions/game/in/turn_180" },
 	{ Action::LookUp,			{ VK_UP },					nullptr },
 	{ Action::LookDown,			{ VK_DOWN },				nullptr },
-	{ Action::ToggleTunes,		{ 'N' },					nullptr },
-	{ Action::ToggleMusic,		{ 'M' },					nullptr },
+	{ Action::ToggleTunes,		{ VK_N },					nullptr },
+	{ Action::ToggleMusic,		{ VK_M },					nullptr },
 	{ Action::MusicVolumeUp,	{ VK_OEM_PLUS },			nullptr },
 	{ Action::MusicVolumeDown,	{ VK_OEM_MINUS },			nullptr },
 };
@@ -1425,12 +1425,15 @@ void Augmentinel::OnInputAction(uint8_t& action)
 
 		action = 0x00;	// create robot
 	}
-	else if (m_pView->InputAction(Action::Tree))
+	else if (m_pView->InputAction(Action::Tree)) {
 		action = 0x02;	// create tree
-	else if (m_pView->InputAction(Action::Boulder))
+	}
+	else if (m_pView->InputAction(Action::Boulder)) {
 		action = 0x03;	// create boulder
-	else if (m_pView->InputAction(Action::Absorb))
+	}
+	else if (m_pView->InputAction(Action::Absorb)) {
 		action = 0x20;	// absorb
+	}
 	else if (m_pView->InputAction(Action::Transfer))
 	{
 		action = 0x21;	// transfer

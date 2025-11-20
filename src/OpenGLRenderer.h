@@ -61,9 +61,10 @@ private:
     GLuint m_pixelConstantsUBO{0};
 
     // Model buffer management (Phase 3.3)
-    std::map<const Model*, GLuint> m_modelVBOs;
-    std::map<const Model*, GLuint> m_modelIBOs;
-    std::map<const Model*, size_t> m_modelIndexCounts;
+    // Use vertex buffer pointer as cache key (identifies unique geometry)
+    std::map<const void*, GLuint> m_modelVBOs;
+    std::map<const void*, GLuint> m_modelIBOs;
+    std::map<const void*, size_t> m_modelIndexCounts;
 
     // Performance tracking
     uint32_t m_drawCallCount{0};
