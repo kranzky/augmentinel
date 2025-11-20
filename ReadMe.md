@@ -129,6 +129,22 @@ cmake --build .
 
 The screenshot tool renders one frame, saves `screenshot.png` (1600x900), and exits automatically.
 
+#### Controls
+
+R	        Create Robot
+B	        Create Boulder
+T	        Create Tree
+A	        Absorb Object
+Q	        Transfer to Robot
+H	        Hyperspace
+U	        U-turn
+Mouse Move	Pan View
+L Button	Absorb
+R Button	Transfer to Robot
+P / Pause	Pause Game
+Esc	Quit
+
+
 #### Current Limitations
 
 - Model rendering not yet implemented (Phase 2.8-2.11, then Phase 3)

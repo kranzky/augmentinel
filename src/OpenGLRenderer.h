@@ -31,6 +31,11 @@ public:
 
     void SetVerticalFOV(float fov) override;
 
+    // Performance stats
+    uint32_t GetDrawCallCount() const { return m_drawCallCount; }
+    uint32_t GetModelCount() const { return m_modelVBOs.size(); }
+    void ResetStats() { m_drawCallCount = 0; }
+
 private:
     // Shader loading helpers
     std::string LoadShaderFile(const std::string& filename);
@@ -59,4 +64,7 @@ private:
     std::map<const Model*, GLuint> m_modelVBOs;
     std::map<const Model*, GLuint> m_modelIBOs;
     std::map<const Model*, size_t> m_modelIndexCounts;
+
+    // Performance tracking
+    uint32_t m_drawCallCount{0};
 };

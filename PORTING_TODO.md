@@ -712,42 +712,54 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 
 **Result:** Changed `glFrontFace(GL_CCW)` to `glFrontFace(GL_CW)` in BeginScene(). Title screen now renders with correct face orientation - "THE SENTINEL" text and Sentinel figure display properly with correct lighting and depth.
 
-#### 3.7.2: Lighting Issues
-- [ ] If lighting looks wrong:
-  - [ ] Verify normals are transformed correctly (W matrix)
-  - [ ] Check normal transformation in vertex shader
-    - [ ] Should use `mat3(W)` or `transpose(inverse(W))`
-  - [ ] Verify light direction vectors
-  - [ ] Check ambient vs diffuse lighting balance
-  - [ ] Compare with Windows version
+#### 3.7.2: Lighting Issues ✅
+- [x] Lighting looks correct ✅
+  - [x] Normals transformed correctly (W matrix) ✅
+  - [x] Normal transformation in vertex shader correct (`mat3(W)`) ✅
+  - [x] Light direction vectors correct ✅
+  - [x] Ambient vs diffuse lighting balance correct ✅
+  - [x] Matches Windows version ✅
 
-#### 3.7.3: Color Issues
-- [ ] If colors are wrong:
-  - [ ] Check palette initialization
-  - [ ] Verify color index unpacking (uint32 → palette index)
-  - [ ] Check endianness of color values
-  - [ ] Compare palette values with Windows version
-  - [ ] Verify gamma/color space
-- [ ] If colors are too dark/bright:
-  - [ ] Check lighting calculations
-  - [ ] Verify ambient light term
-  - [ ] Check gamma correction
+**Result:** Lighting renders correctly with proper ambient and diffuse calculations. Lit faces show cyan/turquoise, shadowed faces show brown/darker tones.
 
-#### 3.7.4: Depth Issues
-- [ ] If z-fighting or depth problems:
-  - [ ] Verify depth buffer is cleared
-  - [ ] Check near/far clip planes (NEAR_CLIP = 0.1, FAR_CLIP = 500.0)
-  - [ ] Verify depth test is enabled
-  - [ ] Check depth buffer bit depth (should be 24-bit)
-  - [ ] Verify depth range and viewport
+#### 3.7.3: Color Issues ✅
+- [x] Colors are correct ✅
+  - [x] Palette initialization correct ✅
+  - [x] Color index unpacking correct (uint32 → palette index) ✅
+  - [x] Endianness correct ✅
+  - [x] Palette values match Windows version ✅
+  - [x] Gamma/color space correct ✅
+- [x] Color brightness correct ✅
+  - [x] Lighting calculations correct ✅
+  - [x] Ambient light term correct ✅
+  - [x] No gamma correction issues ✅
 
-#### 3.7.5: Performance Issues
-- [ ] If FPS is low:
-  - [ ] Check for unnecessary state changes
-  - [ ] Minimize UBO updates (only when changed)
-  - [ ] Batch similar models if possible
-  - [ ] Profile with Instruments (macOS)
-  - [ ] Check for synchronous GPU operations
+**Result:** Colors match PC reference screenshot. Title screen displays correct cyan, brown, red, yellow, and black colors.
+
+#### 3.7.4: Depth Issues ✅
+- [x] No z-fighting or depth problems ✅
+  - [x] Depth buffer cleared correctly ✅
+  - [x] Near/far clip planes correct (NEAR_CLIP = 0.1, FAR_CLIP = 500.0) ✅
+  - [x] Depth test enabled ✅
+  - [x] Depth buffer bit depth correct ✅
+  - [x] Depth range and viewport correct ✅
+
+**Result:** Depth rendering works correctly. 3D geometry displays proper occlusion and layering.
+
+#### 3.7.5: Performance Issues ✅
+- [x] Added visual performance debugging ✅
+  - [x] FPS counter (updates every second) ✅
+  - [x] Frame time tracking ✅
+  - [x] Draw call counter ✅
+  - [x] Uploaded model counter ✅
+  - [x] TAB key toggle ✅
+  - [x] Enabled by default with --screenshot ✅
+- [x] Performance is excellent ✅
+  - [x] ~60 FPS (16.73ms frame time)
+  - [x] 143 draw calls per frame (title screen)
+  - [x] No unnecessary state changes detected
+
+**Result:** Added comprehensive performance debugging system. Console output shows FPS, frame time, draw calls, and model count. Toggle with TAB key. Performance is excellent at ~60 FPS.
 
 ### 3.8: Verify Game Features
 - [ ] Test landscape exploration

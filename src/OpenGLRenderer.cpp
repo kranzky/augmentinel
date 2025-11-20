@@ -170,6 +170,8 @@ bool OpenGLRenderer::Init() {
 }
 
 void OpenGLRenderer::BeginScene() {
+    // Reset performance stats
+    m_drawCallCount = 0;
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
@@ -288,6 +290,7 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
     // Draw
     size_t indexCount = m_modelIndexCounts.at(&model);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    m_drawCallCount++;
 
     // Check for OpenGL errors
     GLenum err = glGetError();

@@ -28,4 +28,12 @@ private:
     bool m_running{true};
     int m_windowWidth{1600};
     int m_windowHeight{900};
+
+    // Performance debugging
+    bool m_showDebugInfo{false};
+    uint32_t m_frameCount{0};
+    uint32_t m_fpsFrameCount{0};
+    uint32_t m_fpsLastTime{0};
+    float m_currentFPS{0.0f};
+    float m_avgFrameTime{0.0f};
 };

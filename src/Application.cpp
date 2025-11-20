@@ -94,6 +94,14 @@ void Application::Run(bool dumpScreenshot) {
     auto lastTime = std::chrono::high_resolution_clock::now();
     int warmupFrames = dumpScreenshot ? 10 : 0;  // Wait 10 frames before screenshot
 
+    // Enable debug info by default when taking screenshots
+    m_showDebugInfo = dumpScreenshot;
+    m_fpsLastTime = SDL_GetTicks();
+
+    if (m_showDebugInfo) {
+        SDL_Log("Debug info enabled (press TAB to toggle)");
+    }
+
     while (m_running) {
         // Process events
         SDL_Event event;
@@ -108,6 +116,31 @@ void Application::Run(bool dumpScreenshot) {
         float elapsed = std::chrono::duration<float>(currentTime - lastTime).count();
         elapsed = std::min(elapsed, MAX_ACCUMULATED_TIME);
         lastTime = currentTime;
+
+        // Update FPS counter
+        m_frameCount++;
+        m_fpsFrameCount++;
+        m_avgFrameTime = elapsed * 1000.0f; // Convert to milliseconds
+
+        uint32_t currentTicks = SDL_GetTicks();
+        if (currentTicks - m_fpsLastTime >= 1000) {  // Update FPS every second
+            m_currentFPS = m_fpsFrameCount * 1000.0f / (currentTicks - m_fpsLastTime);
+            m_fpsFrameCount = 0;
+            m_fpsLastTime = currentTicks;
+
+            if (m_showDebugInfo && m_pRenderer) {
+                auto* glRenderer = dynamic_cast<OpenGLRenderer*>(m_pRenderer.get());
+                SDL_Log("=== Performance Stats ===");
+                SDL_Log("  FPS: %.1f", m_currentFPS);
+                SDL_Log("  Frame Time: %.2f ms", m_avgFrameTime);
+                SDL_Log("  Total Frames: %u", m_frameCount);
+                if (glRenderer) {
+                    SDL_Log("  Draw Calls: %u", glRenderer->GetDrawCallCount());
+                    SDL_Log("  Uploaded Models: %u", glRenderer->GetModelCount());
+                }
+                SDL_Log("========================");
+            }
+        }
 
         // Update game
         if (m_pGame) {
@@ -128,6 +161,19 @@ void Application::Run(bool dumpScreenshot) {
             warmupFrames--;
         }
         if (dumpScreenshot && warmupFrames == 0) {
+            // Display final performance stats before screenshot
+            if (m_showDebugInfo && m_pRenderer) {
+                auto* glRenderer = dynamic_cast<OpenGLRenderer*>(m_pRenderer.get());
+                SDL_Log("=== Final Performance Stats ===");
+                SDL_Log("  Total Frames: %u", m_frameCount);
+                SDL_Log("  Avg Frame Time: %.2f ms", m_avgFrameTime);
+                if (glRenderer) {
+                    SDL_Log("  Draw Calls (last frame): %u", glRenderer->GetDrawCallCount());
+                    SDL_Log("  Uploaded Models: %u", glRenderer->GetModelCount());
+                }
+                SDL_Log("===============================");
+            }
+
             SDL_Log("Capturing screenshot...");
 
             // Allocate buffer for screenshot (RGB, no alpha)
@@ -206,6 +252,13 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed) {
     // Special case: ESC to quit
     if (key.keysym.sym == SDLK_ESCAPE && pressed) {
         m_running = false;
+        return;
+    }
+
+    // Special case: TAB to toggle debug info
+    if (key.keysym.sym == SDLK_TAB && pressed) {
+        m_showDebugInfo = !m_showDebugInfo;
+        SDL_Log("Debug info %s", m_showDebugInfo ? "enabled" : "disabled");
         return;
     }
 
