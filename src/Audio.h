@@ -1,5 +1,7 @@
 #pragma once
 #include "Platform.h"
+#include <map>
+#include <string>
 
 enum class AudioType {
     Tune,
@@ -8,56 +10,49 @@ enum class AudioType {
     Effect
 };
 
-// Stub Audio class for Phase 1
-// Will be properly implemented with SDL2_mixer in Phase 4
+// Audio class using SDL2_mixer
 class Audio {
 public:
-    Audio() {
-        SDL_Log("Audio stub initialized");
-    }
+    Audio();
+    ~Audio();
 
-    ~Audio() {
-    }
+    bool Available() const { return m_initialized; }
 
-    bool Available() const { return false; }
+    bool LoadWAV(const fs::path& path);
 
-    bool LoadWAV(const fs::path& path) {
-        return false;
-    }
+    bool Play(const std::wstring& filename, AudioType type);
+    void Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos);
+    void Play(const std::wstring& filename);
+    void PlaySound(const fs::path& path, float volume = 1.0f);
+    void PlayMusic(const fs::path& path, bool loop = false);
 
-    bool Play(const std::wstring& filename, AudioType type) {
-        return false;
-    }
+    void SetMusicVolume(float volume);
+    bool SetMusicPlaying(bool play);
 
-    void Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos) {
-    }
+    void PositionListener(XMFLOAT3 pos, XMFLOAT3 dir, XMFLOAT3 up);
 
-    void Play(const std::wstring& filename) {
-    }
+    bool IsPlaying(AudioType type) const;
 
-    void PlaySound(const fs::path& path, float volume = 1.0f) {
-    }
+    void Stop(AudioType type);
+    void Stop();
 
-    void PlayMusic(const fs::path& path, bool loop = false) {
-    }
+private:
+    bool m_initialized{false};
 
-    void SetMusicVolume(float volume) {
-    }
+    // SDL_mixer types
+    Mix_Music* m_music{nullptr};
+    std::map<std::wstring, Mix_Chunk*> m_sounds;
 
-    bool SetMusicPlaying(bool play) {
-        return false;
-    }
+    // Audio state
+    float m_musicVolume{1.0f};
+    float m_soundVolume{1.0f};
+    bool m_musicPlaying{false};
 
-    void PositionListener(XMFLOAT3 pos, XMFLOAT3 dir, XMFLOAT3 up) {
-    }
+    // Sound directory paths
+    fs::path m_soundsDir;
+    fs::path m_musicDir;
 
-    bool IsPlaying(AudioType type) const {
-        return false;
-    }
-
-    void Stop(AudioType type) {
-    }
-
-    void Stop() {
-    }
+    // Helper methods
+    fs::path GetSoundPath(const std::wstring& filename);
+    Mix_Chunk* LoadSound(const std::wstring& filename);
 };
