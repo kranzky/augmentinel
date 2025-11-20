@@ -623,41 +623,41 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [x] Test: UploadModel compiles ✅
 
 ### 3.4: Implement DrawModel
-- [ ] Update `OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel)`
-  - [ ] Check if model is valid: `if (!model) return;`
-  - [ ] Upload if needed: `if (!m_modelVBOs.count(&model)) UploadModel(model);`
-  - [ ] Calculate world matrix: `auto world = model.GetWorldMatrix(linkedModel);`
-  - [ ] Calculate WVP: `auto wvp = world * m_mViewProjection;`
-  - [ ] **Transpose matrices for GLSL:**
+- [x] Update `OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel)` ✅
+  - [x] Check if model is valid: `if (!model) return;` ✅
+  - [x] Upload if needed: `if (!m_modelVBOs.count(&model)) UploadModel(model);` ✅
+  - [x] Calculate world matrix: `auto world = model.GetWorldMatrix(linkedModel);` ✅
+  - [x] Calculate WVP: `auto wvp = world * m_mViewProjection;` ✅
+  - [x] **Transpose matrices for GLSL:** ✅
     ```cpp
     m_vertexConstants.WVP = XMMatrixTranspose(wvp);
     m_vertexConstants.W = XMMatrixTranspose(world);
     ```
-  - [ ] Set eye position (for lighting):
+  - [x] Set eye position (for lighting): ✅
     ```cpp
     auto eyePos = m_camera.GetPosition();
     m_vertexConstants.EyePos = eyePos;
     ```
-  - [ ] Set lighting flag: `m_vertexConstants.lighting = model.lighting ? 1 : 0;`
-  - [ ] Set dissolved value: `m_pixelConstants.dissolved = model.dissolved;`
-  - [ ] Update UBOs:
+  - [x] Set lighting flag: `m_vertexConstants.lighting = model.lighting ? 1 : 0;` ✅
+  - [x] Set dissolved value: `m_pixelConstants.dissolved = model.dissolved;` ✅
+  - [x] Update UBOs: ✅
     ```cpp
     UpdateVertexConstants();
     UpdatePixelConstants();
     ```
-  - [ ] Bind buffers:
+  - [x] Bind buffers: ✅
     ```cpp
     glBindBuffer(GL_ARRAY_BUFFER, m_modelVBOs.at(&model));
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_modelIBOs.at(&model));
     ```
-  - [ ] Set up vertex attributes (same as Phase 2 triangle setup)
-  - [ ] Draw:
+  - [x] Set up vertex attributes (same as Phase 2 triangle setup) ✅
+  - [x] Draw: ✅
     ```cpp
     size_t indexCount = m_modelIndexCounts.at(&model);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
     ```
-  - [ ] Check glGetError()
-- [ ] Test: DrawModel compiles
+  - [x] Check glGetError() ✅
+- [x] Test: DrawModel compiles ✅
 
 ### 3.5: Update BeginScene/Render Flow
 - [ ] Update `OpenGLRenderer::BeginScene()`

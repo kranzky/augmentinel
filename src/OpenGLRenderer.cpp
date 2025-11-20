@@ -280,8 +280,70 @@ void OpenGLRenderer::EndScene() {
 }
 
 void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
-    // Phase 3: Implement model rendering
-    // For now, stub
+    // Check if model is valid
+    if (!model) {
+        return;
+    }
+
+    // Upload if not already uploaded
+    if (!m_modelVBOs.count(&model)) {
+        UploadModel(model);
+    }
+
+    // Calculate world matrix
+    auto world = model.GetWorldMatrix(linkedModel);
+
+    // Calculate WVP (world-view-projection)
+    auto wvp = world * m_mViewProjection;
+
+    // Transpose matrices for GLSL (DirectXMath uses row-major, GLSL uses column-major)
+    m_vertexConstants.WVP = XMMatrixTranspose(wvp);
+    m_vertexConstants.W = XMMatrixTranspose(world);
+
+    // Set eye position for lighting
+    auto eyePos = m_camera.GetPosition();
+    m_vertexConstants.EyePos = eyePos;
+
+    // Set lighting flag
+    m_vertexConstants.lighting = model.lighting ? 1 : 0;
+
+    // Set dissolved value
+    m_pixelConstants.dissolved = model.dissolved;
+
+    // Update uniform buffers
+    UpdateVertexConstants();
+    UpdatePixelConstants();
+
+    // Bind buffers
+    glBindBuffer(GL_ARRAY_BUFFER, m_modelVBOs.at(&model));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_modelIBOs.at(&model));
+
+    // Set up vertex attributes (same layout as test triangle)
+    // Attribute 0: position (vec3)
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
+
+    // Attribute 1: normal (vec3)
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
+    // Attribute 2: color (uint)
+    glEnableVertexAttribArray(2);
+    glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(Vertex), (void*)offsetof(Vertex, colour));
+
+    // Attribute 3: texcoord (vec2)
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
+
+    // Draw
+    size_t indexCount = m_modelIndexCounts.at(&model);
+    glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: DrawModel failed with GL error: 0x%x", err);
+    }
 }
 
 void OpenGLRenderer::DrawControllers() {
