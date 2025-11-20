@@ -170,6 +170,7 @@ bool OpenGLRenderer::Init() {
 }
 
 void OpenGLRenderer::BeginScene() {
+
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -193,7 +194,8 @@ void OpenGLRenderer::BeginScene() {
     // Set up view and projection matrices
     XMMATRIX view = m_camera.GetViewMatrix();
     float aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
-    XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspectRatio, NEAR_CLIP, FAR_CLIP);
+    float fovRadians = XMConvertToRadians(m_verticalFOV);
+    XMMATRIX proj = XMMatrixPerspectiveFovLH(fovRadians, aspectRatio, NEAR_CLIP, FAR_CLIP);
     m_mViewProjection = view * proj;
 
     // Store camera position in vertex constants for lighting calculations
@@ -242,9 +244,11 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
     // Calculate WVP (world-view-projection)
     auto wvp = world * m_mViewProjection;
 
-    // Transpose matrices for GLSL (DirectXMath uses row-major, GLSL uses column-major)
-    m_vertexConstants.WVP = XMMatrixTranspose(wvp);
-    m_vertexConstants.W = XMMatrixTranspose(world);
+    // NOTE: DirectXMath matrices work directly with GLSL without transposition
+    // Even though DirectXMath uses row-major and GLSL uses column-major,
+    // the memory layout is compatible as-is.
+    m_vertexConstants.WVP = wvp;
+    m_vertexConstants.W = world;
 
     // Set eye position for lighting
     auto eyePos = m_camera.GetPosition();
@@ -501,4 +505,9 @@ void OpenGLRenderer::UploadModel(const Model& model) {
     if (err != GL_NO_ERROR) {
         SDL_Log("ERROR: UploadModel failed with GL error: 0x%x", err);
     }
+}
+
+void OpenGLRenderer::SetVerticalFOV(float fov) {
+    m_verticalFOV = fov;
+    SDL_Log("SetVerticalFOV: %.2f degrees", fov);
 }

@@ -29,6 +29,8 @@ public:
     XMMATRIX GetOrthographicMatrix() const override;
     void GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const override;
 
+    void SetVerticalFOV(float fov) override;
+
 private:
     // Shader loading helpers
     std::string LoadShaderFile(const std::string& filename);
@@ -44,6 +46,7 @@ private:
 
     int m_width;
     int m_height;
+    float m_verticalFOV{17.4f};  // Default Sentinel FOV
 
     // OpenGL objects
     GLuint m_vao{0};
