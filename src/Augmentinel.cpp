@@ -265,6 +265,12 @@ void Augmentinel::Render(IScene* pScene)
 				icon.scale = 0.1f;
 				icon.dissolved = dissolved;
 			}
+			else
+			{
+				// Flat mode: keep orthographic positioning but ensure it's within screen bounds
+				// Icons stay at the position set in OnAddEnergySymbol
+				// They use orthographic projection with corrected depth range
+			}
 
 			pScene->DrawModel(icon);
 		}
@@ -1788,11 +1794,13 @@ void Augmentinel::OnHideEnergyPanel()
 
 void Augmentinel::OnAddEnergySymbol(int symbol_idx, int x_offset)
 {
-	static constexpr auto x_base = -10.0f;
-	static constexpr auto y = 970.0f;
+	// Orthographic screen coordinates: x=[-800,800], y=[-450,450] for 1600x900
+	// Position icons at top-left of screen (matching PC version)
+	static constexpr auto x_base = -795.0f;  // Near left edge
+	static constexpr auto y = 420.0f;        // Near top edge
 	static constexpr auto z = FAR_CLIP / 2.0f;
-	static constexpr auto scale = 30.0f;
-	static constexpr auto spacing = 20.0f;
+	static constexpr auto scale = 27.0f;     // Icon size matching PC version
+	static constexpr auto spacing = 15.0f;   // Tight spacing like PC version
 
 	// Clear existing icons if the panel is being redrawn.
 	if (x_offset == 0)

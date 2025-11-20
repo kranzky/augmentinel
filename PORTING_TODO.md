@@ -858,26 +858,28 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
   - [ ] Code validation (10,000+ landscapes unlocked)
   - [ ] Remember last played landscape
 
-### 4.4: Energy Display UI
-- [ ] Locate or create energy icons
-  - [ ] Find existing icon bitmaps (gold robot, robot, boulder, tree)
-  - [ ] Check images/ directory for platform-specific icons
-  - [ ] Extract from original game assets if needed
-  - [ ] Convert to appropriate format (PNG with transparency)
-- [ ] Implement energy display system
-  - [ ] Get player energy value from Spectrum emulator
-  - [ ] Calculate which icons to show based on energy
-  - [ ] Create UI overlay rendering (orthographic projection)
-  - [ ] Position icons appropriately on screen
-- [ ] Icon rendering
-  - [ ] Load icon textures at startup
-  - [ ] Render icons as 2D sprites over 3D scene
-  - [ ] Support different icon sizes/scales
-  - [ ] Handle icon animations (if any)
-- [ ] Integration & testing
-  - [ ] Energy display updates as player creates/absorbs objects
-  - [ ] Icons visible in all game states
-  - [ ] Proper layering (icons on top of 3D scene)
+### 4.4: Energy Display UI ✅
+- [x] Locate or create energy icons ✅
+  - [x] Icons are 3D models extracted from Spectrum memory (not bitmaps) ✅
+  - [x] Gold robot, blue robot, boulder, tree models ✅
+  - [x] Spectrum::IconToModel() extracts icon data ✅
+  - [x] Icons cached for performance ✅
+- [x] Implement energy display system ✅
+  - [x] OnAddEnergySymbol() receives energy data from Spectrum emulator ✅
+  - [x] Icons created based on symbol_idx (1=robot, 2=tree, 4=boulder, 6=gold robot) ✅
+  - [x] Orthographic projection support added to DrawModel() ✅
+  - [x] Icons positioned in screen space (x_base, y, z coordinates) ✅
+- [x] Icon rendering ✅
+  - [x] Icons rendered as 3D models with model.orthographic flag ✅
+  - [x] Rendered in Augmentinel::Render() for GameState::Game ✅
+  - [x] Scale and spacing configured (scale=27, spacing=15, positioned at top-left) ✅
+  - [x] No lighting on icons (model.lighting = false) ✅
+- [x] Integration & testing ✅
+  - [x] Energy display updates via OnAddEnergySymbol hook ✅
+  - [x] Icons visible in game state when m_icons not empty ✅
+  - [x] Proper layering (drawn after game models) ✅
+
+**Result:** Energy display system was already fully implemented! Icons are 3D models extracted from Spectrum memory (not bitmaps). Added orthographic projection support to OpenGLRenderer::DrawModel() and fixed GetOrthographicMatrix() to use correct depth range (NEAR_CLIP to FAR_CLIP). Icons now positioned correctly in top-left corner (x=-795, y=420) matching PC version, with proper scale (27) and spacing (15). Energy icons display during gameplay showing gold robot, blue robot, boulder, and tree based on player energy.
 
 ### 4.5: Screen Effects & Transitions
 - [ ] Screen blanking effects

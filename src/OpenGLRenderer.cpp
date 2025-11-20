@@ -245,7 +245,9 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
     auto world = model.GetWorldMatrix(linkedModel);
 
     // Calculate WVP (world-view-projection)
-    auto wvp = world * m_mViewProjection;
+    // Use orthographic projection for UI elements (energy icons)
+    auto projection = model.orthographic ? GetOrthographicMatrix() : m_mViewProjection;
+    auto wvp = world * projection;
 
     // NOTE: DirectXMath matrices work directly with GLSL without transposition
     // Even though DirectXMath uses row-major and GLSL uses column-major,
@@ -345,9 +347,10 @@ XMMATRIX OpenGLRenderer::GetViewProjectionMatrix() const {
 
 XMMATRIX OpenGLRenderer::GetOrthographicMatrix() const {
     // Return orthographic matrix for UI rendering
+    // Uses same depth range as perspective projection for consistency
     float width = static_cast<float>(m_width);
     float height = static_cast<float>(m_height);
-    return XMMatrixOrthographicLH(width, height, 0.0f, 1.0f);
+    return XMMatrixOrthographicLH(width, height, NEAR_CLIP, FAR_CLIP);
 }
 
 void OpenGLRenderer::GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const {
