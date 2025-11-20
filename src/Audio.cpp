@@ -38,8 +38,8 @@ Audio::Audio() {
     SDL_Log("  Music: %s", m_musicDir.string().c_str());
 
     // Load and play background music automatically
-    // Note: Some WAV formats (like Microsoft ADPCM) may not be supported by SDL_mixer
-    fs::path musicPath = m_musicDir / "amiga.wav";
+    // Using PCM format for compatibility with SDL_mixer
+    fs::path musicPath = m_musicDir / "amiga_pcm.wav";
     if (fs::exists(musicPath)) {
         PlayMusic(musicPath, true);  // Loop music
         if (!m_musicPlaying) {
