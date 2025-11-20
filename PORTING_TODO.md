@@ -587,8 +587,8 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 ### 3.2: Add OpenGL Members to Model (Future)
 **Note:** For Phase 3, models will be uploaded on-demand by renderer. OpenGL buffer handles will be stored in renderer, not in Model class. This avoids modifying the portable Model class.
 
-- [ ] Decision: Store VBO/IBO in renderer's map, keyed by Model*
-- [ ] Alternative: Add optional OpenGL members to Model (requires more changes)
+- [x] Decision: Store VBO/IBO in renderer's map, keyed by Model* ✅
+- [ ] Alternative: Add optional OpenGL members to Model (requires more changes) ❌ Not chosen
 
 ### 3.3: Implement Model Upload in Renderer
 - [ ] Add `std::map<const Model*, GLuint> m_modelVBOs;` to OpenGLRenderer
