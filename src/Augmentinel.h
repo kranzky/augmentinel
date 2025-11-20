@@ -17,6 +17,7 @@ public:
 
 	void Render(IScene* pScene) final override;
 	void Frame(float elapsed_seconds) final override;
+	bool WantsToQuit() const final override;
 
 #ifdef PLATFORM_WINDOWS
 	static void Options(HINSTANCE hinst, HWND hwndParent);
@@ -82,6 +83,7 @@ protected:
 	int m_substate{ 0 };
 	bool m_title_shown{ false };
 	bool m_rotate_landscape{ true };
+	bool m_wantsToQuit{ false };
 
 	bool m_tunes_enabled{ true };
 	bool m_music_enabled{ true };

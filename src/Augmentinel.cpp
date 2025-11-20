@@ -438,6 +438,8 @@ void Augmentinel::Frame(float fElapsed)
 				m_pView->SetEffect(ViewEffect::Fade, 1.0f);
 #ifdef PLATFORM_WINDOWS
 				PostQuitMessage(0);
+#else
+				m_wantsToQuit = true;
 #endif
 			}
 			else if (m_pView->InputAction(Action::TitleContinue))
@@ -672,11 +674,43 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 1:	// fade in to main game
+		{
+			// Allow keyboard rotation during fade-in for better responsiveness
+			float rot_x{ 0.0f }, rot_y{ 0.0f };
+
+			if (m_pView->InputAction(Action::TurnLeft))
+				rot_y -= XMConvertToRadians(90.0f) * fElapsed;
+			else if (m_pView->InputAction(Action::TurnRight))
+				rot_y += XMConvertToRadians(90.0f) * fElapsed;
+			else if (m_pView->InputAction(Action::TurnLeft45))
+				rot_y -= XMConvertToRadians(45);
+			else if (m_pView->InputAction(Action::TurnRight45))
+				rot_y += XMConvertToRadians(45);
+			else if (m_pView->InputAction(Action::TurnLeft90))
+				rot_y -= XMConvertToRadians(90);
+			else if (m_pView->InputAction(Action::TurnRight90))
+				rot_y += XMConvertToRadians(90);
+			else if (m_pView->InputAction(Action::Turn180))
+				rot_y += XMConvertToRadians(180);
+			else if (m_pView->InputAction(Action::LookUp))
+				rot_x -= XMConvertToRadians(60.0f) * fElapsed;
+			else if (m_pView->InputAction(Action::LookDown))
+				rot_x += XMConvertToRadians(60.0f) * fElapsed;
+
+			if (rot_x || rot_y)
+			{
+				auto rot = m_pView->GetCameraRotation();
+				rot.x += rot_x;
+				rot.y += rot_y;
+				m_pView->SetCameraRotation(rot);
+			}
+
 			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f))
 				break;
 
 			m_substate++;
 			break;
+		}
 
 		case 2:	// main game
 		{
@@ -706,11 +740,13 @@ void Augmentinel::Frame(float fElapsed)
 
 			float rot_x{ 0.0f }, rot_y{ 0.0f };
 
-			// Cursor key rotations roughly matching the original game.
+			// Cursor key rotations - frame-rate independent
+			// Continuous rotation: 90 deg/sec horizontal, 60 deg/sec vertical
+			// Instant jumps: 45/90/180 degrees applied once per press
 			if (m_pView->InputAction(Action::TurnLeft))
-				rot_y -= XMConvertToRadians(30);
+				rot_y -= XMConvertToRadians(90.0f) * fElapsed;
 			else if (m_pView->InputAction(Action::TurnRight))
-				rot_y += XMConvertToRadians(30);
+				rot_y += XMConvertToRadians(90.0f) * fElapsed;
 			else if (m_pView->InputAction(Action::TurnLeft45))
 				rot_y -= XMConvertToRadians(45);
 			else if (m_pView->InputAction(Action::TurnRight45))
@@ -722,9 +758,9 @@ void Augmentinel::Frame(float fElapsed)
 			else if (m_pView->InputAction(Action::Turn180))
 				rot_y += XMConvertToRadians(180);
 			else if (m_pView->InputAction(Action::LookUp))
-				rot_x -= XMConvertToRadians(10);
+				rot_x -= XMConvertToRadians(60.0f) * fElapsed;
 			else if (m_pView->InputAction(Action::LookDown))
-				rot_x += XMConvertToRadians(10);
+				rot_x += XMConvertToRadians(60.0f) * fElapsed;
 
 			if (rot_x || rot_y)
 			{
@@ -984,6 +1020,11 @@ void Augmentinel::Frame(float fElapsed)
 		m_pView->GetViewPosition(),
 		m_pView->GetViewDirection(),
 		m_pView->GetUpDirection());
+}
+
+bool Augmentinel::WantsToQuit() const
+{
+	return m_wantsToQuit;
 }
 
 void Augmentinel::AddText(const std::string& str, float x_centre, float y, float z, int colour, bool reversed)

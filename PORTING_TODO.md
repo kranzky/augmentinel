@@ -761,18 +761,18 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 
 **Result:** Added comprehensive performance debugging system. Console output shows FPS, frame time, draw calls, and model count. Toggle with TAB key. Performance is excellent at ~60 FPS.
 
-### 3.8: Verify Game Features
-- [ ] Test landscape exploration
-  - [ ] Can move camera with mouse
-  - [ ] Can see terrain, objects
-  - [ ] Geometry loads correctly
-- [ ] Test model types render:
-  - [ ] Trees
-  - [ ] Boulders
-  - [ ] Robots
-  - [ ] Sentinels
-  - [ ] Pedestals
-  - [ ] Landscape tiles
+### 3.8: Verify Game Features ✅
+- [x] Test landscape exploration ✅
+  - [x] Can move camera with mouse ✅
+  - [x] Can see terrain, objects ✅
+  - [x] Geometry loads correctly ✅
+- [x] Test model types render: ✅
+  - [x] Trees ✅
+  - [x] Boulders ✅
+  - [x] Robots ✅
+  - [x] Sentinels ✅
+  - [x] Pedestals ✅
+  - [x] Landscape tiles ✅
 - [ ] Test object creation (if input works)
   - [ ] Tree creation shows model
   - [ ] Boulder creation shows model

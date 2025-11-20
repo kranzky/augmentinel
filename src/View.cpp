@@ -185,6 +185,25 @@ void View::SetPitchLimits(float min_pitch, float max_pitch) {
 }
 
 void View::MouseMove(int x, int y) {
+    if (!m_freelook) {
+        return;
+    }
+
+    // Convert mouse delta to camera rotation
+    // SDL mouse motion is much more sensitive than Win32, so we apply an additional multiplier
+    // x = horizontal movement (yaw), y = vertical movement (pitch)
+    constexpr float SDL_MOUSE_SENSITIVITY_MULTIPLIER = 100.0f;
+    float yaw = static_cast<float>(x) / (m_mouse_divider * SDL_MOUSE_SENSITIVITY_MULTIPLIER);
+    float pitch = static_cast<float>(y) / (m_mouse_divider * SDL_MOUSE_SENSITIVITY_MULTIPLIER);
+
+    // Apply mouse inversion if enabled
+    if (m_invert_mouse) {
+        pitch = -pitch;
+    }
+
+    // Update camera rotation
+    m_camera.Yaw(yaw);
+    m_camera.Pitch(pitch);
 }
 
 void View::UpdateKey(int virtKey, KeyState state) {

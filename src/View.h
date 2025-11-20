@@ -180,7 +180,7 @@ protected:
 	std::unique_ptr<D3D11StateTracker> m_pStateTracker;
 #endif
 
-	float m_mouse_divider{ 1.0f };
+	float m_mouse_divider{ DEFAULT_MOUSE_DIVISOR };
 	int m_msaa_samples{ DEFAULT_MSAA_SAMPLES };	// 4x MSAA
 	bool m_allow_tearing{ false };
 	bool m_fullscreen{ false };

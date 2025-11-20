@@ -166,6 +166,12 @@ void Application::Run(bool dumpScreenshot) {
         // Update game
         if (m_pGame) {
             m_pGame->Frame(elapsed);
+
+            // Check if game wants to quit (e.g., from title screen)
+            if (m_pGame->WantsToQuit()) {
+                m_running = false;
+                break;
+            }
         }
 
         // Process key edges (convert DownEdge->Down, UpEdge->Up)
@@ -290,7 +296,7 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed) {
         return;
     }
 
-    // Pass key events to renderer for game input
+    // Pass key events to renderer for game input (including ESC)
     if (m_pRenderer) {
         // SDL keycodes map directly to VK_ codes via Platform.h
         int virtKey = key.keysym.sym;

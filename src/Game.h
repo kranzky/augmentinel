@@ -22,4 +22,5 @@ class Game : public IGame
 public:
 	virtual ~Game() = default;
 	virtual void Frame(float elapsed_seconds) = 0;
+	virtual bool WantsToQuit() const { return false; }
 };
