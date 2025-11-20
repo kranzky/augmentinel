@@ -178,7 +178,7 @@ void OpenGLRenderer::BeginScene() {
     // Enable backface culling
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
+    glFrontFace(GL_CW);  // Changed from GL_CCW - models use clockwise winding
 
     // Set clear color based on fill_colour_idx (palette-based background)
     if (m_fill_colour_idx >= 0 && m_fill_colour_idx < 16) {

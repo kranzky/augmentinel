@@ -698,17 +698,19 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 
 ### 3.7: Fix Rendering Issues
 
-#### 3.7.1: Geometry Issues
-- [ ] If geometry is inverted (inside-out):
-  - [ ] Try `glFrontFace(GL_CW);` instead of GL_CCW
-  - [ ] Or flip triangle winding in model data
-  - [ ] Or flip cull face: `glCullFace(GL_FRONT);`
-- [ ] If geometry is upside down:
-  - [ ] Check projection matrix handedness
-  - [ ] May need to flip Y in projection
-- [ ] If geometry is stretched:
-  - [ ] Verify aspect ratio in projection matrix
-  - [ ] Check for correct window width/height
+#### 3.7.1: Geometry Issues ✅
+- [x] If geometry is inverted (inside-out): ✅
+  - [x] Try `glFrontFace(GL_CW);` instead of GL_CCW ✅ **FIXED!**
+  - [n/a] Or flip triangle winding in model data
+  - [n/a] Or flip cull face: `glCullFace(GL_FRONT);`
+- [n/a] If geometry is upside down: (not needed - geometry orientation correct)
+  - [n/a] Check projection matrix handedness
+  - [n/a] May need to flip Y in projection
+- [n/a] If geometry is stretched: (not needed - aspect ratio correct)
+  - [n/a] Verify aspect ratio in projection matrix
+  - [n/a] Check for correct window width/height
+
+**Result:** Changed `glFrontFace(GL_CCW)` to `glFrontFace(GL_CW)` in BeginScene(). Title screen now renders with correct face orientation - "THE SENTINEL" text and Sentinel figure display properly with correct lighting and depth.
 
 #### 3.7.2: Lighting Issues
 - [ ] If lighting looks wrong:
