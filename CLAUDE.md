@@ -8,7 +8,7 @@ Augmentinel is a re-skinned version of Geoff Crammond's classic game "The Sentin
 
 **IMPORTANT:** This codebase has TWO implementations:
 1. **Windows (Original)** - Win32 + Direct3D 11 - Fully functional
-2. **SDL2 + OpenGL (Port)** - macOS/Linux - **Currently in development (Phase 2.7/11)**
+2. **SDL2 + OpenGL (Port)** - macOS/Linux - **Currently in development (Phase 4 - Polish & Features)**
 
 When working on this codebase, check:
 - **For SDL2+OpenGL port work:** See `PORTING_TODO.md` for current status and next tasks
@@ -18,8 +18,8 @@ When working on this codebase, check:
 
 ### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
 
-**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅ 🎉
-**Current**: Phase 3 - Model Rendering
+**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅ 🎉
+**Current**: Phase 4 - Polish & Remaining Features
 
 **Build:**
 ```bash
@@ -42,8 +42,14 @@ cmake --build .
 - ✅ GLSL shaders (Sentinel.vert/frag, Effect.vert/frag)
 - ✅ Uniform buffers (UBOs) created and bound
 - ✅ Screenshot tool for testing
-- ⏳ Uniform buffer updates (Phase 2.8)
-- ⏳ Model rendering (Phase 2.9-3.x)
+- ✅ Model rendering with GPU caching
+- ✅ Full game loop with input system (keyboard + mouse)
+- ✅ Object creation and absorption working
+- ✅ Complete gameplay - playable through full levels
+- ⏳ Audio system (Phase 4.1)
+- ⏳ Settings persistence (Phase 4.2)
+- ⏳ Energy UI display (Phase 4.4)
+- ⏳ Screen effects (Phase 4.5)
 
 **Key Files:**
 - `src/OpenGLRenderer.cpp/h` - OpenGL renderer implementation
@@ -245,19 +251,23 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 - ✅ Perspective transformation functional
 - ✅ Matrix transposition (row-major → column-major)
 
-**Phase 3 (Current):** Model Rendering
-- Upload game models to GPU (VBO/IBO)
-- Implement DrawModel() to render from Spectrum memory
-- Integrate with Augmentinel game logic
-- Re-enable game updates
+**Phase 3 (Complete ✅):** Model Rendering & Gameplay
+- ✅ GPU model upload with VBO/IBO caching (vertex buffer pointer as cache key)
+- ✅ DrawModel() renders from Spectrum memory
+- ✅ Full game integration (game updates enabled)
+- ✅ Mouse and keyboard input system (SDL2)
+- ✅ Object creation and absorption working
+- ✅ Complete gameplay - playable through full levels
+- ✅ Performance: ~60 FPS, efficient geometry sharing
+
+**Phase 4 (Current):** Polish & Remaining Features
+- Audio system (SDL_mixer)
+- Settings persistence
+- Energy UI display
+- Screen effects and transitions
+- Game state testing
+- Bug fixes
 
 **Future Phases:**
-- Phase 4: Game integration (audio, input, settings)
-- Phase 5: Effects & polish
+- Phase 5: Effects & polish (deprecation warnings, post-processing)
 - Phase 6: Testing & debugging
-
-**Important Notes for Phase 3:**
-- Game updates (`m_pGame->Frame()`) currently disabled to prevent camera conflicts
-- Test camera at (0, 0, -5) for shader pipeline verification
-- Re-enable game updates when implementing DrawModel() in Phase 3
-- Model class has Windows-specific D3D11 members that need conditional compilation

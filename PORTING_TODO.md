@@ -792,12 +792,118 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 
 ---
 
-## Phase 4: Game Integration (2-3 days)
+## Phase 4: Polish & Remaining Features (2-3 days)
 
 **Status:** Not Started
 **Prerequisites:** Phase 3 complete
 
-*(Content unchanged from original, as Phase 4 hasn't been started yet)*
+### 4.1: Audio System (SDL_mixer)
+- [ ] Initialize SDL_mixer
+  - [ ] Add SDL_mixer to CMakeLists.txt dependencies
+  - [ ] Initialize audio subsystem on startup
+  - [ ] Handle audio device selection/errors
+- [ ] Implement sound effects
+  - [ ] Load WAV files from sounds/ directories
+  - [ ] Play platform-specific tunes (BBC/C64/Spectrum/Amiga)
+  - [ ] Implement PlaySound() method
+  - [ ] Test absorption, creation, transfer sounds
+- [ ] Implement background music
+  - [ ] Load music files from sounds/music/
+  - [ ] Implement PlayMusic() with looping
+  - [ ] Music volume controls
+  - [ ] Test music playback during gameplay
+- [ ] Spatial audio (optional)
+  - [ ] Implement PositionListener() for 3D audio
+  - [ ] Test sound positioning with object locations
+
+### 4.2: Settings System
+- [ ] Implement settings persistence
+  - [ ] Choose INI library (SimpleIni or alternatives)
+  - [ ] Implement InitSettings(), GetSetting(), SetSetting()
+  - [ ] Create default settings file on first run
+  - [ ] Load settings on startup
+  - [ ] Save settings on exit
+- [ ] Graphics settings
+  - [ ] Window size/fullscreen mode
+  - [ ] VSync enable/disable
+  - [ ] FOV setting
+- [ ] Audio settings
+  - [ ] Master volume
+  - [ ] Music volume
+  - [ ] Sound effects volume
+  - [ ] Tune selection (BBC/C64/Spectrum/Amiga)
+  - [ ] Music enable/disable
+- [ ] Control settings
+  - [ ] Mouse sensitivity
+  - [ ] Invert mouse Y-axis
+  - [ ] Key bindings (if configurable)
+
+### 4.3: Game State & Progression
+- [ ] Test all game states
+  - [ ] Title screen → Landscape preview transition
+  - [ ] Landscape preview → Game start
+  - [ ] Game → Sky view (Q key)
+  - [ ] Game → Level complete
+  - [ ] Level complete → Next level
+- [ ] Test win/lose conditions
+  - [ ] Win: Absorb sentinel and transfer to its pedestal
+  - [ ] Lose: Absorbed by sentinel/sentry/meanie
+  - [ ] Proper game over screen displays on defeat
+  - [ ] Game over screen shows correct information
+  - [ ] Can exit or restart from game over screen
+- [ ] Test landscape codes
+  - [ ] Enter custom landscape codes
+  - [ ] Code validation (10,000+ landscapes unlocked)
+  - [ ] Remember last played landscape
+
+### 4.4: Energy Display UI
+- [ ] Locate or create energy icons
+  - [ ] Find existing icon bitmaps (gold robot, robot, boulder, tree)
+  - [ ] Check images/ directory for platform-specific icons
+  - [ ] Extract from original game assets if needed
+  - [ ] Convert to appropriate format (PNG with transparency)
+- [ ] Implement energy display system
+  - [ ] Get player energy value from Spectrum emulator
+  - [ ] Calculate which icons to show based on energy
+  - [ ] Create UI overlay rendering (orthographic projection)
+  - [ ] Position icons appropriately on screen
+- [ ] Icon rendering
+  - [ ] Load icon textures at startup
+  - [ ] Render icons as 2D sprites over 3D scene
+  - [ ] Support different icon sizes/scales
+  - [ ] Handle icon animations (if any)
+- [ ] Integration & testing
+  - [ ] Energy display updates as player creates/absorbs objects
+  - [ ] Icons visible in all game states
+  - [ ] Proper layering (icons on top of 3D scene)
+
+### 4.5: Screen Effects & Transitions
+- [ ] Screen blanking effects
+  - [ ] Blank screen during transfer action
+  - [ ] Blank screen during U-turn (180° rotation)
+  - [ ] Identify other cases requiring screen blank
+  - [ ] Implement fade-to-black transition
+  - [ ] Proper timing for each effect
+- [ ] Verify effect integration
+  - [ ] Effects don't interfere with gameplay
+  - [ ] Screen restores correctly after effect
+  - [ ] Effects work with existing fade/dissolve system
+
+### 4.6: Bug Fixes & Testing
+- [ ] Full gameplay testing
+  - [ ] Play through 3+ levels completely
+  - [ ] Test all object types (trees, boulders, robots)
+  - [ ] Test absorption and creation extensively
+  - [ ] Verify energy system works correctly
+- [ ] Edge case testing
+  - [ ] Rapid key presses
+  - [ ] Creating/absorbing while animations active
+  - [ ] Window resize during gameplay
+  - [ ] Alt-tab / focus loss behavior
+- [ ] Performance verification
+  - [ ] No memory leaks (check with instruments/valgrind)
+  - [ ] Stable frame rate during long play sessions
+  - [ ] GPU memory usage reasonable
 
 ---
 
