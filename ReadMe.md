@@ -142,8 +142,8 @@ Mouse Move	Pan View
 L Button	Absorb
 R Button	Transfer to Robot
 P / Pause	Pause Game
+TAB         Toggle Debug View
 Esc	Quit
-
 
 #### Current Limitations
 
