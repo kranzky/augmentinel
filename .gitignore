@@ -17,3 +17,5 @@ desktop.ini
 *.backup
 *.orig
 *~
+
+.DS_Store
