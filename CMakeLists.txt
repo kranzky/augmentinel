@@ -25,6 +25,13 @@ find_path(SDL2_MIXER_INCLUDE_DIR SDL2/SDL_mixer.h
     HINTS ${SDL2_MIXER_LIB_DIR}/../include
 )
 
+# SDL2_ttf
+find_library(SDL2_TTF_LIBRARY SDL2_ttf REQUIRED)
+get_filename_component(SDL2_TTF_LIB_DIR ${SDL2_TTF_LIBRARY} DIRECTORY)
+find_path(SDL2_TTF_INCLUDE_DIR SDL2/SDL_ttf.h
+    HINTS ${SDL2_TTF_LIB_DIR}/../include
+)
+
 # DirectXMath (cross-platform math library)
 include(FetchContent)
 FetchContent_Declare(
@@ -91,6 +98,7 @@ set(SOURCES
     src/main.cpp
     src/Application.cpp
     src/OpenGLRenderer.cpp
+    src/DebugOverlay.cpp
     src/View.cpp
     src/Augmentinel.cpp
     src/Spectrum.cpp
@@ -107,6 +115,7 @@ set(HEADERS
     src/Platform.h
     src/Application.h
     src/OpenGLRenderer.h
+    src/DebugOverlay.h
     src/Augmentinel.h
     src/Spectrum.h
     src/Model.h
@@ -132,12 +141,14 @@ target_include_directories(Augmentinel PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/z80
     ${SDL2_INCLUDE_DIRS}
     ${SDL2_MIXER_INCLUDE_DIR}
+    ${SDL2_TTF_INCLUDE_DIR}
     ${directxmath_SOURCE_DIR}/Inc
 )
 
 target_link_libraries(Augmentinel
     SDL2::SDL2
     ${SDL2_MIXER_LIBRARY}
+    ${SDL2_TTF_LIBRARY}
     OpenGL::GL
 )
 

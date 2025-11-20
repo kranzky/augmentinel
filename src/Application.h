@@ -3,6 +3,7 @@
 #include "Game.h"
 #include "Audio.h"
 #include "View.h"
+#include "DebugOverlay.h"
 
 class Application {
 public:
@@ -24,6 +25,7 @@ private:
     std::shared_ptr<View> m_pRenderer;
     std::shared_ptr<Audio> m_pAudio;
     std::unique_ptr<Game> m_pGame;
+    std::unique_ptr<DebugOverlay> m_pDebugOverlay;
 
     bool m_running{true};
     int m_windowWidth{1600};

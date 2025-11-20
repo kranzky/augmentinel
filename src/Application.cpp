@@ -83,6 +83,13 @@ bool Application::Init() {
     // Create game
     m_pGame = std::make_unique<Augmentinel>(m_pRenderer, m_pAudio);
 
+    // Create debug overlay
+    m_pDebugOverlay = std::make_unique<DebugOverlay>();
+    if (!m_pDebugOverlay->Init(m_windowWidth, m_windowHeight)) {
+        SDL_Log("WARNING: DebugOverlay init failed, debug overlay will be disabled");
+        m_pDebugOverlay.reset();
+    }
+
     // Enable relative mouse mode for free look
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
@@ -127,19 +134,33 @@ void Application::Run(bool dumpScreenshot) {
             m_currentFPS = m_fpsFrameCount * 1000.0f / (currentTicks - m_fpsLastTime);
             m_fpsFrameCount = 0;
             m_fpsLastTime = currentTicks;
+        }
 
-            if (m_showDebugInfo && m_pRenderer) {
-                auto* glRenderer = dynamic_cast<OpenGLRenderer*>(m_pRenderer.get());
-                SDL_Log("=== Performance Stats ===");
-                SDL_Log("  FPS: %.1f", m_currentFPS);
-                SDL_Log("  Frame Time: %.2f ms", m_avgFrameTime);
-                SDL_Log("  Total Frames: %u", m_frameCount);
-                if (glRenderer) {
-                    SDL_Log("  Draw Calls: %u", glRenderer->GetDrawCallCount());
-                    SDL_Log("  Uploaded Models: %u", glRenderer->GetModelCount());
-                }
-                SDL_Log("========================");
+        // Update debug overlay every frame if enabled
+        if (m_showDebugInfo && m_pDebugOverlay && m_pRenderer) {
+            auto* glRenderer = dynamic_cast<OpenGLRenderer*>(m_pRenderer.get());
+
+            std::vector<std::string> debugLines;
+            char buffer[256];
+
+            snprintf(buffer, sizeof(buffer), "FPS: %.1f", m_currentFPS);
+            debugLines.push_back(buffer);
+
+            snprintf(buffer, sizeof(buffer), "Frame Time: %.2f ms", m_avgFrameTime);
+            debugLines.push_back(buffer);
+
+            snprintf(buffer, sizeof(buffer), "Total Frames: %u", m_frameCount);
+            debugLines.push_back(buffer);
+
+            if (glRenderer) {
+                snprintf(buffer, sizeof(buffer), "Draw Calls: %u", glRenderer->GetDrawCallCount());
+                debugLines.push_back(buffer);
+
+                snprintf(buffer, sizeof(buffer), "Uploaded Models: %u", glRenderer->GetModelCount());
+                debugLines.push_back(buffer);
             }
+
+            m_pDebugOverlay->SetText(debugLines);
         }
 
         // Update game
@@ -154,6 +175,11 @@ void Application::Run(bool dumpScreenshot) {
                 m_pRenderer->Render(m_pGame.get());
             }
             m_pRenderer->EndScene();
+        }
+
+        // Render debug overlay on top of everything
+        if (m_showDebugInfo && m_pDebugOverlay) {
+            m_pDebugOverlay->Render();
         }
 
         // Dump screenshot BEFORE swap if requested (to capture back buffer)
@@ -242,6 +268,9 @@ void Application::ProcessEvent(const SDL_Event& event) {
                 m_windowHeight = event.window.data2;
                 if (m_pRenderer) {
                     m_pRenderer->OnResize(m_windowWidth, m_windowHeight);
+                }
+                if (m_pDebugOverlay) {
+                    m_pDebugOverlay->OnResize(m_windowWidth, m_windowHeight);
                 }
             }
             break;
