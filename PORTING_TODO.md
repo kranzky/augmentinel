@@ -582,7 +582,7 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [x] Model.h D3D11 members wrapped
 - [x] Model.cpp D3D11 code wrapped
 - [x] BufferHeap.h includes removed
-- [ ] Verify Model class compiles clean on macOS ✅
+- [x] Verify Model class compiles clean on macOS ✅
 
 ### 3.2: Add OpenGL Members to Model (Future)
 **Note:** For Phase 3, models will be uploaded on-demand by renderer. OpenGL buffer handles will be stored in renderer, not in Model class. This avoids modifying the portable Model class.
