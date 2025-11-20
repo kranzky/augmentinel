@@ -660,22 +660,22 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [x] Test: DrawModel compiles ✅
 
 ### 3.5: Update BeginScene/Render Flow
-- [ ] Update `OpenGLRenderer::BeginScene()`
-  - [ ] Clear buffers: `glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);`
-  - [ ] Enable depth test: `glEnable(GL_DEPTH_TEST)`
-  - [ ] Enable backface culling: `glEnable(GL_CULL_FACE); glCullFace(GL_BACK);`
-  - [ ] Set up view matrix from camera
-  - [ ] Set up projection matrix (FOV, aspect, near, far)
-  - [ ] Calculate m_mViewProjection = view * proj
-  - [ ] Set clear color based on m_fill_colour_idx or game state
-- [ ] Update `OpenGLRenderer::Render(IGame* pGame)`
-  - [ ] Bind sentinel shader: `glUseProgram(m_sentinelProgram)`
-  - [ ] Bind VAO: `glBindVertexArray(m_vao)`
-  - [ ] Call `pGame->Render(this)` to let game draw its models
-    - [ ] Game will call our DrawModel() for each model
-  - [ ] Unbind VAO
-- [ ] Remove test triangle code
-- [ ] Test: Compiles
+- [x] Update `OpenGLRenderer::BeginScene()` ✅
+  - [x] Clear buffers: `glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);` ✅
+  - [x] Enable depth test: `glEnable(GL_DEPTH_TEST)` ✅
+  - [x] Enable backface culling: `glEnable(GL_CULL_FACE); glCullFace(GL_BACK);` ✅
+  - [x] Set up view matrix from camera ✅
+  - [x] Set up projection matrix (FOV, aspect, near, far) ✅
+  - [x] Calculate m_mViewProjection = view * proj ✅
+  - [x] Set clear color based on m_fill_colour_idx or game state ✅
+- [x] Update `OpenGLRenderer::Render(IGame* pGame)` ✅
+  - [x] Bind sentinel shader: `glUseProgram(m_sentinelProgram)` ✅
+  - [x] Bind VAO: `glBindVertexArray(m_vao)` ✅
+  - [x] Call `pGame->Render(this)` to let game draw its models ✅
+    - [x] Game will call our DrawModel() for each model ✅
+  - [x] Unbind VAO ✅
+- [x] Remove test triangle code ✅
+- [x] Test: Compiles ✅
 
 ### 3.6: Test with Game Rendering
 - [ ] Run application

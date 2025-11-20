@@ -10,9 +10,6 @@ OpenGLRenderer::~OpenGLRenderer() {
     if (m_vao) {
         glDeleteVertexArrays(1, &m_vao);
     }
-    if (m_testVBO) {
-        glDeleteBuffers(1, &m_testVBO);
-    }
     if (m_sentinelProgram) {
         glDeleteProgram(m_sentinelProgram);
     }
@@ -24,6 +21,14 @@ OpenGLRenderer::~OpenGLRenderer() {
     }
     if (m_pixelConstantsUBO) {
         glDeleteBuffers(1, &m_pixelConstantsUBO);
+    }
+
+    // Cleanup model buffers
+    for (auto& pair : m_modelVBOs) {
+        glDeleteBuffers(1, &pair.second);
+    }
+    for (auto& pair : m_modelIBOs) {
+        glDeleteBuffers(1, &pair.second);
     }
 }
 
@@ -144,72 +149,48 @@ bool OpenGLRenderer::Init() {
 
     SDL_Log("OpenGLRenderer: Uniform buffers created successfully");
 
-    // Create test triangle (Phase 2.9)
-    SDL_Log("OpenGLRenderer: Creating test triangle...");
-
-    // Define test triangle vertices (RGB triangle for testing)
-    Vertex testVerts[3] = {
-        Vertex(-0.5f, -0.5f, 0.0f, 0),  // Bottom-left (will use palette[0] - red)
-        Vertex( 0.5f, -0.5f, 0.0f, 1),  // Bottom-right (will use palette[1] - green)
-        Vertex( 0.0f,  0.5f, 0.0f, 2),  // Top (will use palette[2] - blue)
-    };
-
-    // Create and upload vertex buffer
-    glGenBuffers(1, &m_testVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_testVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(testVerts), testVerts, GL_STATIC_DRAW);
-    SDL_Log("  - Test VBO created: %u (%zu bytes)", m_testVBO, sizeof(testVerts));
-
-    // Create VAO and configure vertex attributes
+    // Create VAO (vertex attributes will be set up per-draw in DrawModel)
     glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
-
-    // Attribute 0: position (vec3)
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, pos));
-
-    // Attribute 1: normal (vec3)
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-
-    // Attribute 2: color (uint)
-    glEnableVertexAttribArray(2);
-    glVertexAttribIPointer(2, 1, GL_UNSIGNED_INT, sizeof(Vertex), (void*)offsetof(Vertex, colour));
-
-    // Attribute 3: texcoord (vec2)
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texcoord));
-
-    // Unbind VAO
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
     SDL_Log("  - VAO created: %u", m_vao);
 
     // Check for errors
     err = glGetError();
     if (err != GL_NO_ERROR) {
-        SDL_Log("ERROR: OpenGL error during test triangle creation: 0x%x", err);
+        SDL_Log("ERROR: OpenGL error during VAO creation: 0x%x", err);
         return false;
     }
 
-    SDL_Log("OpenGLRenderer: Test triangle created successfully");
+    // Initialize camera (game will set actual position)
+    m_camera.SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
+    m_camera.SetRotation(XMFLOAT3(0.0f, 0.0f, 0.0f));
 
-    // Phase 2.11: Initialize camera to a good starting position
-    // Position camera back from origin so we can see the test triangle at (0, 0, 5)
-    m_camera.SetPosition(XMFLOAT3(0.0f, 0.0f, -5.0f));  // 5 units back
-    m_camera.SetRotation(XMFLOAT3(0.0f, 0.0f, 0.0f));   // Looking forward (+Z)
-
-    SDL_Log("OpenGLRenderer: Camera initialized at (0, 0, -5)");
+    SDL_Log("OpenGLRenderer: Camera initialized");
 
     return true;
 }
 
 void OpenGLRenderer::BeginScene() {
+    // Enable depth testing
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+
+    // Enable backface culling
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
+
+    // Set clear color based on fill_colour_idx (palette-based background)
+    if (m_fill_colour_idx >= 0 && m_fill_colour_idx < 16) {
+        XMFLOAT4 clearColor = m_vertexConstants.Palette[m_fill_colour_idx];
+        glClearColor(clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+    } else {
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);  // Default black
+    }
+
     // Clear buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // Phase 2.11: Set up view and projection matrices
+    // Set up view and projection matrices
     XMMATRIX view = m_camera.GetViewMatrix();
     float aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
     XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, aspectRatio, NEAR_CLIP, FAR_CLIP);
@@ -220,59 +201,24 @@ void OpenGLRenderer::BeginScene() {
     m_vertexConstants.EyePos = eyePos;
 
     // Update pixel constants (view effects)
-    // Vertex constants will be updated in Render() after WVP is set
     UpdatePixelConstants();
 }
 
 void OpenGLRenderer::Render(IGame* pGame) {
-    // Phase 2.10-2.11: Render test triangle with 3D projection
-
-    // Phase 2.11: Create world matrix - position triangle 5 units in front of camera
-    XMMATRIX world = XMMatrixTranslation(0.0f, 0.0f, 5.0f);
-
-    // Calculate final WVP matrix (World * View * Projection)
-    // IMPORTANT: Transpose for GLSL (DirectXMath is row-major, GLSL is column-major)
-    m_vertexConstants.WVP = XMMatrixTranspose(world * m_mViewProjection);
-    m_vertexConstants.W = XMMatrixTranspose(world);
-
-    // Set palette colors (RGB for vertices with palette indices 0, 1, 2)
-    m_vertexConstants.Palette[0] = XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);  // Red
-    m_vertexConstants.Palette[1] = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);  // Green
-    m_vertexConstants.Palette[2] = XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f);  // Blue
-
-    // Update vertex constants UBO with new values
-    UpdateVertexConstants();
-
-    // Bind shader program
+    // Bind sentinel shader program
     glUseProgram(m_sentinelProgram);
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        SDL_Log("ERROR: Failed to bind shader program: 0x%x", err);
-        return;
-    }
 
     // Bind VAO
     glBindVertexArray(m_vao);
-    err = glGetError();
-    if (err != GL_NO_ERROR) {
-        SDL_Log("ERROR: Failed to bind VAO: 0x%x", err);
-        return;
+
+    // Call game to render its models
+    // Game will call our DrawModel() for each model it wants to render
+    if (pGame) {
+        pGame->Render(this);
     }
 
-    // Draw triangle
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    err = glGetError();
-    if (err != GL_NO_ERROR) {
-        SDL_Log("ERROR: Failed to draw triangle: 0x%x", err);
-        return;
-    }
-
-    // Unbind
+    // Unbind VAO
     glBindVertexArray(0);
-    glUseProgram(0);
-
-    // Phase 3+: Render game objects
-    // pGame->Render(this);
 }
 
 void OpenGLRenderer::EndScene() {
