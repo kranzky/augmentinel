@@ -118,6 +118,7 @@ public:
 	KeyState GetKeyState(int key);
 	bool AnyKeyPressed();
 	void ProcessDebugKeys();
+	void ProcessKeyEdges();
 	void ReleaseKeys();
 
 protected:

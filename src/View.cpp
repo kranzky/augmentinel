@@ -30,6 +30,24 @@ void View::EnableFreeLook(bool enable) {
 }
 
 bool View::InputAction(Action action) {
+    auto it = m_key_bindings.find(action);
+    if (it == m_key_bindings.end()) {
+        return false;
+    }
+
+    // Check if any of the bound keys are down or just pressed
+    for (int key : it->second) {
+        auto key_state = GetKeyState(key);
+        if (key_state == KeyState::Down || key_state == KeyState::DownEdge) {
+            return true;
+        }
+    }
+
+    // Special handling for VK_ANY - any key pressed
+    if (std::find(it->second.begin(), it->second.end(), VK_ANY) != it->second.end()) {
+        return AnyKeyPressed();
+    }
+
     return false;
 }
 
@@ -95,6 +113,10 @@ void View::OnResize(uint32_t rt_width, uint32_t rt_height) {
 }
 
 void View::SetInputBindings(const std::vector<ActionBinding>& bindings) {
+    m_key_bindings.clear();
+    for (const auto& binding : bindings) {
+        m_key_bindings[binding.action] = binding.virt_keys;
+    }
 }
 
 void View::PollInputBindings(const std::vector<ActionBinding>& bindings) {
@@ -184,6 +206,26 @@ bool View::AnyKeyPressed() {
 }
 
 void View::ProcessDebugKeys() {
+}
+
+void View::ProcessKeyEdges() {
+    // Convert edge states to sustained states
+    for (auto& pair : m_keys) {
+        if (pair.second == KeyState::DownEdge) {
+            pair.second = KeyState::Down;
+        } else if (pair.second == KeyState::UpEdge) {
+            pair.second = KeyState::Up;
+        }
+    }
+
+    // Remove keys that are in Up state to keep map clean
+    for (auto it = m_keys.begin(); it != m_keys.end(); ) {
+        if (it->second == KeyState::Up) {
+            it = m_keys.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 void View::ReleaseKeys() {

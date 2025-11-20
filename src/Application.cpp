@@ -168,6 +168,11 @@ void Application::Run(bool dumpScreenshot) {
             m_pGame->Frame(elapsed);
         }
 
+        // Process key edges (convert DownEdge->Down, UpEdge->Up)
+        if (m_pRenderer) {
+            m_pRenderer->ProcessKeyEdges();
+        }
+
         // Render
         if (m_pRenderer) {
             m_pRenderer->BeginScene();
@@ -278,12 +283,6 @@ void Application::ProcessEvent(const SDL_Event& event) {
 }
 
 void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed) {
-    // Special case: ESC to quit
-    if (key.keysym.sym == SDLK_ESCAPE && pressed) {
-        m_running = false;
-        return;
-    }
-
     // Special case: TAB to toggle debug info
     if (key.keysym.sym == SDLK_TAB && pressed) {
         m_showDebugInfo = !m_showDebugInfo;
@@ -291,18 +290,19 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed) {
         return;
     }
 
-    // Phase 4: Implement full key mapping
-    // For now, just pass basic keys to renderer
+    // Pass key events to renderer for game input
     if (m_pRenderer) {
-        // TODO: Map SDL keys to VK_ codes
-        // m_pRenderer->UpdateKey(mappedKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
+        // SDL keycodes map directly to VK_ codes via Platform.h
+        int virtKey = key.keysym.sym;
+        m_pRenderer->UpdateKey(virtKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
     }
 }
 
 void Application::ProcessMouseButton(const SDL_MouseButtonEvent& button, bool pressed) {
-    // Phase 4: Implement mouse button mapping
     if (m_pRenderer) {
-        // TODO: Map SDL mouse buttons to VK_ codes
+        // Map SDL mouse buttons to VK_ codes (offset by 1000 as defined in Platform.h)
+        int virtKey = 1000 + button.button;
+        m_pRenderer->UpdateKey(virtKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
     }
 }
 
