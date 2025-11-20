@@ -92,6 +92,7 @@ bool Application::Init() {
 
 void Application::Run(bool dumpScreenshot) {
     auto lastTime = std::chrono::high_resolution_clock::now();
+    int warmupFrames = dumpScreenshot ? 10 : 0;  // Wait 10 frames before screenshot
 
     while (m_running) {
         // Process events
@@ -109,11 +110,9 @@ void Application::Run(bool dumpScreenshot) {
         lastTime = currentTime;
 
         // Update game
-        // TODO Phase 3: Re-enable game updates when ready for full game integration
-        // For now, skip game updates to prevent it from controlling the test camera
-        // if (m_pGame) {
-        //     m_pGame->Frame(elapsed);
-        // }
+        if (m_pGame) {
+            m_pGame->Frame(elapsed);
+        }
 
         // Render
         if (m_pRenderer) {
@@ -125,7 +124,10 @@ void Application::Run(bool dumpScreenshot) {
         }
 
         // Dump screenshot BEFORE swap if requested (to capture back buffer)
-        if (dumpScreenshot) {
+        if (dumpScreenshot && warmupFrames > 0) {
+            warmupFrames--;
+        }
+        if (dumpScreenshot && warmupFrames == 0) {
             SDL_Log("Capturing screenshot...");
 
             // Allocate buffer for screenshot (RGB, no alpha)
