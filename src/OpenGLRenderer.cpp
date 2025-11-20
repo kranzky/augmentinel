@@ -456,3 +456,41 @@ void OpenGLRenderer::UpdatePixelConstants() {
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(PixelConstants), &m_pixelConstants);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
+
+void OpenGLRenderer::UploadModel(const Model& model) {
+    // Check if already uploaded
+    if (m_modelVBOs.count(&model)) {
+        return;
+    }
+
+    // Get vertex and index data from model
+    auto& vertices = *model.m_pVertices;
+    auto& indices = *model.m_pIndices;
+
+    // Create VBO
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex),
+                 vertices.data(), GL_STATIC_DRAW);
+    m_modelVBOs[&model] = vbo;
+
+    // Create IBO
+    GLuint ibo;
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint32_t),
+                 indices.data(), GL_STATIC_DRAW);
+    m_modelIBOs[&model] = ibo;
+    m_modelIndexCounts[&model] = indices.size();
+
+    // Unbind buffers
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: UploadModel failed with GL error: 0x%x", err);
+    }
+}

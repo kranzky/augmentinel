@@ -591,15 +591,15 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [ ] Alternative: Add optional OpenGL members to Model (requires more changes) ❌ Not chosen
 
 ### 3.3: Implement Model Upload in Renderer
-- [ ] Add `std::map<const Model*, GLuint> m_modelVBOs;` to OpenGLRenderer
-- [ ] Add `std::map<const Model*, GLuint> m_modelIBOs;` to OpenGLRenderer
-- [ ] Add `std::map<const Model*, size_t> m_modelIndexCounts;` to OpenGLRenderer
-- [ ] Add `UploadModel(const Model& model)` method
-  - [ ] Check if already uploaded: `if (m_modelVBOs.count(&model)) return;`
-  - [ ] Get vertex and index data from model
-    - [ ] `auto& vertices = *model.m_pVertices;`
-    - [ ] `auto& indices = *model.m_pIndices;`
-  - [ ] Create VBO
+- [x] Add `std::map<const Model*, GLuint> m_modelVBOs;` to OpenGLRenderer ✅
+- [x] Add `std::map<const Model*, GLuint> m_modelIBOs;` to OpenGLRenderer ✅
+- [x] Add `std::map<const Model*, size_t> m_modelIndexCounts;` to OpenGLRenderer ✅
+- [x] Add `UploadModel(const Model& model)` method ✅
+  - [x] Check if already uploaded: `if (m_modelVBOs.count(&model)) return;` ✅
+  - [x] Get vertex and index data from model ✅
+    - [x] `auto& vertices = *model.m_pVertices;` ✅
+    - [x] `auto& indices = *model.m_pIndices;` ✅
+  - [x] Create VBO ✅
     ```cpp
     GLuint vbo;
     glGenBuffers(1, &vbo);
@@ -608,7 +608,7 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
                  vertices.data(), GL_STATIC_DRAW);
     m_modelVBOs[&model] = vbo;
     ```
-  - [ ] Create IBO
+  - [x] Create IBO ✅
     ```cpp
     GLuint ibo;
     glGenBuffers(1, &ibo);
@@ -618,9 +618,9 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
     m_modelIBOs[&model] = ibo;
     m_modelIndexCounts[&model] = indices.size();
     ```
-  - [ ] Unbind buffers
-  - [ ] Check glGetError()
-- [ ] Test: UploadModel compiles
+  - [x] Unbind buffers ✅
+  - [x] Check glGetError() ✅
+- [x] Test: UploadModel compiles ✅
 
 ### 3.4: Implement DrawModel
 - [ ] Update `OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel)`

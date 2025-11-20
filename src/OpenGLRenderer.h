@@ -39,6 +39,9 @@ private:
     void UpdateVertexConstants();
     void UpdatePixelConstants();
 
+    // Model upload helper
+    void UploadModel(const Model& model);
+
     int m_width;
     int m_height;
 
@@ -49,4 +52,9 @@ private:
     GLuint m_effectProgram{0};
     GLuint m_vertexConstantsUBO{0};
     GLuint m_pixelConstantsUBO{0};
+
+    // Model buffer management (Phase 3.3)
+    std::map<const Model*, GLuint> m_modelVBOs;
+    std::map<const Model*, GLuint> m_modelIBOs;
+    std::map<const Model*, size_t> m_modelIndexCounts;
 };
