@@ -527,11 +527,12 @@ void Augmentinel::Frame(float fElapsed)
 			AddText(ss.str(), 15.0f, 20.0f, -1.0f);
 
 			// Shown left arrow if there is a previous landscape in the unlocked list.
-			if (std::prev(m_codes.find(m_landscape_bcd)) != m_codes.end())
+			auto it_current = m_codes.find(m_landscape_bcd);
+			if (it_current != m_codes.begin())
 				AddText("<", 2.0f, 20.0f, -1.0f);
 
 			// Shown right arrow if there is a next landscape in the unlocked list.
-			if (std::next(m_codes.find(m_landscape_bcd)) != m_codes.end())
+			if (std::next(it_current) != m_codes.end())
 				AddText(">", 28.0f, 20.0f, -1.0f);
 
 			// If the player can see this they're facing the wrong way!
@@ -555,7 +556,7 @@ void Augmentinel::Frame(float fElapsed)
 
 			if (m_pView->InputAction(Action::LandscapePrev))
 			{
-				if (std::prev(it_new) != m_codes.end())
+				if (it_new != m_codes.begin())
 					it_new = std::prev(it_new);
 			}
 			else if (m_pView->InputAction(Action::LandscapeNext))
@@ -567,7 +568,7 @@ void Augmentinel::Frame(float fElapsed)
 			{
 				for (size_t i = 0; i < m_codes.size() / PAGE_STEPS; ++i)
 				{
-					if (std::prev(it_new) != m_codes.end())
+					if (it_new != m_codes.begin())
 						it_new = std::prev(it_new);
 					else
 						break;
