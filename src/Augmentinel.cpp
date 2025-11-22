@@ -797,17 +797,26 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 3: // paused
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.5f, fElapsed, 0.5f))
-				break;
+		{
+			// Fade to 0.5 once, then keep checking for input
+			static bool fade_complete = false;
+			if (!fade_complete)
+			{
+				fade_complete = m_pView->TransitionEffect(ViewEffect::Fade, 0.5f, fElapsed, 0.5f);
+				if (!fade_complete)
+					break;
+			}
 
 			if (m_pView->InputAction(Action::Pause))
 			{
+				fade_complete = false; // Reset for next time
 				// Enable mouse, then fade in to continue game.
 				m_pView->EnableFreeLook(true);
 				m_substate = 1;
 				break;
 			}
 			break;
+		}
 		}
 
 		break;

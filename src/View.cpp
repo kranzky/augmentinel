@@ -45,11 +45,12 @@ bool View::InputAction(Action action)
         return false;
     }
 
-    // Check if any of the bound keys are down or just pressed
+    // Check if any of the bound keys are down, just pressed, or just released
+    // UpEdge detection allows quick taps to be registered even if down/up occur in same frame
     for (int key : it->second)
     {
         auto key_state = GetKeyState(key);
-        if (key_state == KeyState::Down || key_state == KeyState::DownEdge)
+        if (key_state == KeyState::Down || key_state == KeyState::DownEdge || key_state == KeyState::UpEdge)
         {
             return true;
         }
