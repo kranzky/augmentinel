@@ -9,16 +9,20 @@
 
 static constexpr float MAX_ACCUMULATED_TIME = 0.25f;
 
-Application::Application() {
+Application::Application()
+{
 }
 
-Application::~Application() {
+Application::~Application()
+{
     Shutdown();
 }
 
-bool Application::Init() {
+bool Application::Init()
+{
     // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0)
+    {
         SDL_Log("SDL initialization failed: %s", SDL_GetError());
         return false;
     }
@@ -42,17 +46,18 @@ bool Application::Init() {
         SDL_WINDOWPOS_CENTERED,
         m_windowWidth,
         m_windowHeight,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
-    );
+        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
-    if (!m_window) {
+    if (!m_window)
+    {
         SDL_Log("Window creation failed: %s", SDL_GetError());
         return false;
     }
 
     // Create OpenGL context
     m_glContext = SDL_GL_CreateContext(m_window);
-    if (!m_glContext) {
+    if (!m_glContext)
+    {
         SDL_Log("OpenGL context creation failed: %s", SDL_GetError());
         return false;
     }
@@ -71,7 +76,8 @@ bool Application::Init() {
 
     // Create renderer
     auto pOpenGLRenderer = std::make_shared<OpenGLRenderer>(m_windowWidth, m_windowHeight);
-    if (!pOpenGLRenderer->Init()) {
+    if (!pOpenGLRenderer->Init())
+    {
         SDL_Log("Renderer initialization failed");
         return false;
     }
@@ -85,7 +91,8 @@ bool Application::Init() {
 
     // Create debug overlay
     m_pDebugOverlay = std::make_unique<DebugOverlay>();
-    if (!m_pDebugOverlay->Init(m_windowWidth, m_windowHeight)) {
+    if (!m_pDebugOverlay->Init(m_windowWidth, m_windowHeight))
+    {
         SDL_Log("WARNING: DebugOverlay init failed, debug overlay will be disabled");
         m_pDebugOverlay.reset();
     }
@@ -97,26 +104,31 @@ bool Application::Init() {
     return true;
 }
 
-void Application::Run(bool dumpScreenshot) {
+void Application::Run(bool dumpScreenshot)
+{
     auto lastTime = std::chrono::high_resolution_clock::now();
-    int warmupFrames = dumpScreenshot ? 10 : 0;  // Wait 10 frames before screenshot
+    int warmupFrames = dumpScreenshot ? 10 : 0; // Wait 10 frames before screenshot
 
     // Enable debug info by default when taking screenshots
     m_showDebugInfo = dumpScreenshot;
     m_fpsLastTime = SDL_GetTicks();
 
-    if (m_showDebugInfo) {
+    if (m_showDebugInfo)
+    {
         SDL_Log("Debug info enabled (press TAB to toggle)");
     }
 
-    while (m_running) {
+    while (m_running)
+    {
         // Process events
         SDL_Event event;
-        while (SDL_PollEvent(&event)) {
+        while (SDL_PollEvent(&event))
+        {
             ProcessEvent(event);
         }
 
-        if (!m_running) break;
+        if (!m_running)
+            break;
 
         // Calculate delta time
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -130,15 +142,17 @@ void Application::Run(bool dumpScreenshot) {
         m_avgFrameTime = elapsed * 1000.0f; // Convert to milliseconds
 
         uint32_t currentTicks = SDL_GetTicks();
-        if (currentTicks - m_fpsLastTime >= 1000) {  // Update FPS every second
+        if (currentTicks - m_fpsLastTime >= 1000)
+        { // Update FPS every second
             m_currentFPS = m_fpsFrameCount * 1000.0f / (currentTicks - m_fpsLastTime);
             m_fpsFrameCount = 0;
             m_fpsLastTime = currentTicks;
         }
 
         // Update debug overlay every frame if enabled
-        if (m_showDebugInfo && m_pDebugOverlay && m_pRenderer) {
-            auto* glRenderer = dynamic_cast<OpenGLRenderer*>(m_pRenderer.get());
+        if (m_showDebugInfo && m_pDebugOverlay && m_pRenderer)
+        {
+            auto *glRenderer = dynamic_cast<OpenGLRenderer *>(m_pRenderer.get());
 
             std::vector<std::string> debugLines;
             char buffer[256];
@@ -152,7 +166,8 @@ void Application::Run(bool dumpScreenshot) {
             snprintf(buffer, sizeof(buffer), "Total Frames: %u", m_frameCount);
             debugLines.push_back(buffer);
 
-            if (glRenderer) {
+            if (glRenderer)
+            {
                 snprintf(buffer, sizeof(buffer), "Draw Calls: %u", glRenderer->GetDrawCallCount());
                 debugLines.push_back(buffer);
 
@@ -164,47 +179,57 @@ void Application::Run(bool dumpScreenshot) {
         }
 
         // Update game
-        if (m_pGame) {
+        if (m_pGame)
+        {
             m_pGame->Frame(elapsed);
 
             // Check if game wants to quit (e.g., from title screen)
-            if (m_pGame->WantsToQuit()) {
+            if (m_pGame->WantsToQuit())
+            {
                 m_running = false;
                 break;
             }
         }
 
         // Process key edges (convert DownEdge->Down, UpEdge->Up)
-        if (m_pRenderer) {
+        if (m_pRenderer)
+        {
             m_pRenderer->ProcessKeyEdges();
         }
 
         // Render
-        if (m_pRenderer) {
+        if (m_pRenderer)
+        {
             m_pRenderer->BeginScene();
-            if (m_pGame) {
+            if (m_pGame)
+            {
                 m_pRenderer->Render(m_pGame.get());
             }
             m_pRenderer->EndScene();
         }
 
         // Render debug overlay on top of everything
-        if (m_showDebugInfo && m_pDebugOverlay) {
+        if (m_showDebugInfo && m_pDebugOverlay)
+        {
             m_pDebugOverlay->Render();
         }
 
         // Dump screenshot BEFORE swap if requested (to capture back buffer)
-        if (dumpScreenshot && warmupFrames > 0) {
+        if (dumpScreenshot && warmupFrames > 0)
+        {
             warmupFrames--;
         }
-        if (dumpScreenshot && warmupFrames == 0) {
+        if (dumpScreenshot && warmupFrames == 0)
+        {
             // Display final performance stats before screenshot
-            if (m_showDebugInfo && m_pRenderer) {
-                auto* glRenderer = dynamic_cast<OpenGLRenderer*>(m_pRenderer.get());
+            if (m_showDebugInfo && m_pRenderer)
+            {
+                auto *glRenderer = dynamic_cast<OpenGLRenderer *>(m_pRenderer.get());
                 SDL_Log("=== Final Performance Stats ===");
                 SDL_Log("  Total Frames: %u", m_frameCount);
                 SDL_Log("  Avg Frame Time: %.2f ms", m_avgFrameTime);
-                if (glRenderer) {
+                if (glRenderer)
+                {
                     SDL_Log("  Draw Calls (last frame): %u", glRenderer->GetDrawCallCount());
                     SDL_Log("  Uploaded Models: %u", glRenderer->GetModelCount());
                 }
@@ -223,15 +248,19 @@ void Application::Run(bool dumpScreenshot) {
 
             // Flip image vertically (OpenGL has origin at bottom-left, image formats at top-left)
             std::vector<uint8_t> flipped(width * height * 3);
-            for (int y = 0; y < height; y++) {
+            for (int y = 0; y < height; y++)
+            {
                 memcpy(&flipped[y * width * 3], &pixels[(height - 1 - y) * width * 3], width * 3);
             }
 
             // Save as PNG
-            const char* filename = "screenshot.png";
-            if (stbi_write_png(filename, width, height, 3, flipped.data(), width * 3)) {
+            const char *filename = "screenshot.png";
+            if (stbi_write_png(filename, width, height, 3, flipped.data(), width * 3))
+            {
                 SDL_Log("Screenshot saved: %s (%dx%d)", filename, width, height);
-            } else {
+            }
+            else
+            {
                 SDL_Log("ERROR: Failed to save screenshot");
             }
 
@@ -245,86 +274,100 @@ void Application::Run(bool dumpScreenshot) {
     }
 }
 
-void Application::ProcessEvent(const SDL_Event& event) {
-    switch (event.type) {
-        case SDL_QUIT:
-            m_running = false;
-            break;
+void Application::ProcessEvent(const SDL_Event &event)
+{
+    switch (event.type)
+    {
+    case SDL_QUIT:
+        m_running = false;
+        break;
 
-        case SDL_KEYDOWN:
-            ProcessKeyEvent(event.key, true);
-            break;
+    case SDL_KEYDOWN:
+        ProcessKeyEvent(event.key, true);
+        break;
 
-        case SDL_KEYUP:
-            ProcessKeyEvent(event.key, false);
-            break;
+    case SDL_KEYUP:
+        ProcessKeyEvent(event.key, false);
+        break;
 
-        case SDL_MOUSEBUTTONDOWN:
-            ProcessMouseButton(event.button, true);
-            break;
+    case SDL_MOUSEBUTTONDOWN:
+        ProcessMouseButton(event.button, true);
+        break;
 
-        case SDL_MOUSEBUTTONUP:
-            ProcessMouseButton(event.button, false);
-            break;
+    case SDL_MOUSEBUTTONUP:
+        ProcessMouseButton(event.button, false);
+        break;
 
-        case SDL_MOUSEMOTION:
-            if (m_pRenderer) {
-                m_pRenderer->MouseMove(event.motion.xrel, event.motion.yrel);
+    case SDL_MOUSEMOTION:
+        if (m_pRenderer)
+        {
+            m_pRenderer->MouseMove(event.motion.xrel, event.motion.yrel);
+        }
+        break;
+
+    case SDL_WINDOWEVENT:
+        if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+        {
+            m_windowWidth = event.window.data1;
+            m_windowHeight = event.window.data2;
+            if (m_pRenderer)
+            {
+                m_pRenderer->OnResize(m_windowWidth, m_windowHeight);
             }
-            break;
-
-        case SDL_WINDOWEVENT:
-            if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-                m_windowWidth = event.window.data1;
-                m_windowHeight = event.window.data2;
-                if (m_pRenderer) {
-                    m_pRenderer->OnResize(m_windowWidth, m_windowHeight);
-                }
-                if (m_pDebugOverlay) {
-                    m_pDebugOverlay->OnResize(m_windowWidth, m_windowHeight);
-                }
+            if (m_pDebugOverlay)
+            {
+                m_pDebugOverlay->OnResize(m_windowWidth, m_windowHeight);
             }
-            break;
+        }
+        break;
     }
 }
 
-void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed) {
+void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
+{
     // Special case: TAB to toggle debug info
-    if (key.keysym.sym == SDLK_TAB && pressed) {
+    if (key.keysym.sym == SDLK_TAB && pressed)
+    {
         m_showDebugInfo = !m_showDebugInfo;
         SDL_Log("Debug info %s", m_showDebugInfo ? "enabled" : "disabled");
         return;
     }
 
     // Pass key events to renderer for game input (including ESC)
-    if (m_pRenderer) {
+    if (m_pRenderer)
+    {
         // SDL keycodes map directly to VK_ codes via Platform.h
         int virtKey = key.keysym.sym;
         m_pRenderer->UpdateKey(virtKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
     }
 }
 
-void Application::ProcessMouseButton(const SDL_MouseButtonEvent& button, bool pressed) {
-    if (m_pRenderer) {
+void Application::ProcessMouseButton(const SDL_MouseButtonEvent &button, bool pressed)
+{
+    if (m_pRenderer)
+    {
         // Map SDL mouse buttons to VK_ codes (offset by 1000 as defined in Platform.h)
         int virtKey = 1000 + button.button;
         m_pRenderer->UpdateKey(virtKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
     }
 }
 
-void Application::Shutdown() {
+void Application::Shutdown()
+{
     SDL_Log("Shutting down...");
 
     m_pGame.reset();
     m_pAudio.reset();
     m_pRenderer.reset();
 
-    if (m_glContext) {
+    if (m_glContext)
+    {
         SDL_GL_DeleteContext(m_glContext);
         m_glContext = nullptr;
     }
 
-    if (m_window) {
+    if (m_window)
+    {
         SDL_DestroyWindow(m_window);
         m_window = nullptr;
     }

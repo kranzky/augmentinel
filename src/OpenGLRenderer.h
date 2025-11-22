@@ -49,6 +49,10 @@ private:
     // Model upload helper
     void UploadModel(const Model& model);
 
+    // Framebuffer management (Phase 4.5)
+    void InitFramebuffers();
+    void ResizeFramebuffers();
+
     int m_width;
     int m_height;
     float m_verticalFOV{17.4f};  // Default Sentinel FOV
@@ -59,6 +63,11 @@ private:
     GLuint m_effectProgram{0};
     GLuint m_vertexConstantsUBO{0};
     GLuint m_pixelConstantsUBO{0};
+
+    // Framebuffer objects for post-processing (Phase 4.5)
+    GLuint m_sceneFBO{0};           // Framebuffer for rendering scene
+    GLuint m_sceneTexture{0};       // Color texture attached to FBO
+    GLuint m_sceneDepthRBO{0};      // Depth/stencil renderbuffer
 
     // Model buffer management (Phase 3.3)
     // Use vertex buffer pointer as cache key (identifies unique geometry)

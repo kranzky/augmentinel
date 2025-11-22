@@ -191,4 +191,13 @@ protected:
 
 	std::map<int, KeyState> m_keys;
 	std::map<Action, std::vector<int>> m_key_bindings;
+
+	// Transition state tracking (Phase 4.5 fix)
+	struct TransitionState {
+		float start_value;
+		float target_value;
+		float elapsed_time;
+		float total_time;
+	};
+	std::map<ViewEffect, TransitionState> m_transitions;
 };

@@ -23,6 +23,17 @@ OpenGLRenderer::~OpenGLRenderer() {
         glDeleteBuffers(1, &m_pixelConstantsUBO);
     }
 
+    // Cleanup framebuffer objects (Phase 4.5)
+    if (m_sceneFBO) {
+        glDeleteFramebuffers(1, &m_sceneFBO);
+    }
+    if (m_sceneTexture) {
+        glDeleteTextures(1, &m_sceneTexture);
+    }
+    if (m_sceneDepthRBO) {
+        glDeleteRenderbuffers(1, &m_sceneDepthRBO);
+    }
+
     // Cleanup model buffers
     for (auto& pair : m_modelVBOs) {
         glDeleteBuffers(1, &pair.second);
@@ -166,12 +177,24 @@ bool OpenGLRenderer::Init() {
 
     SDL_Log("OpenGLRenderer: Camera initialized");
 
+    // Initialize framebuffers for post-processing (Phase 4.5)
+    InitFramebuffers();
+
     return true;
 }
 
 void OpenGLRenderer::BeginScene() {
     // Reset performance stats
     m_drawCallCount = 0;
+
+    // Phase 4.5: Conditional rendering path
+    // If pixel shader effects are active, render to FBO for post-processing
+    // Otherwise, render directly to screen for better performance
+    if (PixelShaderEffectsActive()) {
+        glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
+    } else {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 
     // Enable depth testing
     glEnable(GL_DEPTH_TEST);
@@ -226,7 +249,56 @@ void OpenGLRenderer::Render(IGame* pGame) {
 }
 
 void OpenGLRenderer::EndScene() {
-    // Nothing needed here - SDL_GL_SwapWindow is called by Application
+    // Phase 4.5: Post-processing with Effect shader
+    // If no effects are active, we rendered directly to screen - nothing to do
+    if (!PixelShaderEffectsActive()) {
+        return;
+    }
+
+    // Bind default framebuffer (render to screen)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Clear screen
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Disable depth test for 2D post-processing
+    glDisable(GL_DEPTH_TEST);
+
+    // Bind Effect shader program
+    glUseProgram(m_effectProgram);
+
+    // Bind VAO (required even though we generate quad from gl_VertexID)
+    glBindVertexArray(m_vao);
+
+    // Bind scene texture to texture unit 0
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+
+    // Set the texture uniform (u_sceneTexture) to texture unit 0
+    GLint texLocation = glGetUniformLocation(m_effectProgram, "u_sceneTexture");
+    if (texLocation != -1) {
+        glUniform1i(texLocation, 0);
+    }
+
+    // Pixel constants are already updated and bound to UBO binding point 1
+    // Effect shader uses them for view_dissolve, view_desaturate, view_fade
+
+    // Draw fullscreen quad (Effect vertex shader generates it from gl_VertexID)
+    // 4 vertices for TRIANGLE_STRIP: (0,0), (1,0), (0,1), (1,1) in UV space
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    // Unbind VAO and texture
+    glBindVertexArray(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Re-enable depth test
+    glEnable(GL_DEPTH_TEST);
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: EndScene post-processing failed with GL error: 0x%x", err);
+    }
 }
 
 void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
@@ -316,6 +388,9 @@ void OpenGLRenderer::OnResize(uint32_t width, uint32_t height) {
     m_height = height;
     glViewport(0, 0, width, height);
     SDL_Log("Viewport resized to %dx%d", width, height);
+
+    // Phase 4.5: Resize framebuffers to match new window size
+    ResizeFramebuffers();
 }
 
 void OpenGLRenderer::MouseMove(int xrel, int yrel) {
@@ -521,4 +596,113 @@ void OpenGLRenderer::UploadModel(const Model& model) {
 void OpenGLRenderer::SetVerticalFOV(float fov) {
     m_verticalFOV = fov;
     SDL_Log("SetVerticalFOV: %.2f degrees", fov);
+}
+
+// Framebuffer management (Phase 4.5)
+
+void OpenGLRenderer::InitFramebuffers() {
+    SDL_Log("OpenGLRenderer: Initializing framebuffers for post-processing...");
+
+    // Generate framebuffer
+    glGenFramebuffers(1, &m_sceneFBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
+
+    // Create scene texture (color attachment)
+    glGenTextures(1, &m_sceneTexture);
+    glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Attach texture to FBO
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_sceneTexture, 0);
+
+    // Create depth/stencil renderbuffer
+    glGenRenderbuffers(1, &m_sceneDepthRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, m_sceneDepthRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_width, m_height);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    // Attach renderbuffer to FBO
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_sceneDepthRBO);
+
+    // Check FBO completeness
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        SDL_Log("ERROR: Framebuffer is not complete! Status: 0x%x", status);
+    } else {
+        SDL_Log("  - Scene FBO: %u (%dx%d)", m_sceneFBO, m_width, m_height);
+        SDL_Log("  - Scene texture: %u", m_sceneTexture);
+        SDL_Log("  - Scene depth RBO: %u", m_sceneDepthRBO);
+    }
+
+    // Unbind framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: OpenGL error during framebuffer creation: 0x%x", err);
+    } else {
+        SDL_Log("OpenGLRenderer: Framebuffers initialized successfully");
+    }
+}
+
+void OpenGLRenderer::ResizeFramebuffers() {
+    SDL_Log("OpenGLRenderer: Resizing framebuffers to %dx%d...", m_width, m_height);
+
+    // Delete old texture and renderbuffer
+    if (m_sceneTexture) {
+        glDeleteTextures(1, &m_sceneTexture);
+        m_sceneTexture = 0;
+    }
+    if (m_sceneDepthRBO) {
+        glDeleteRenderbuffers(1, &m_sceneDepthRBO);
+        m_sceneDepthRBO = 0;
+    }
+
+    // Bind FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);
+
+    // Recreate scene texture
+    glGenTextures(1, &m_sceneTexture);
+    glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Re-attach texture to FBO
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_sceneTexture, 0);
+
+    // Recreate depth/stencil renderbuffer
+    glGenRenderbuffers(1, &m_sceneDepthRBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, m_sceneDepthRBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_width, m_height);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+    // Re-attach renderbuffer to FBO
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_sceneDepthRBO);
+
+    // Check FBO completeness
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
+        SDL_Log("ERROR: Framebuffer is not complete after resize! Status: 0x%x", status);
+    } else {
+        SDL_Log("  - Framebuffers resized successfully");
+    }
+
+    // Unbind framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    // Check for OpenGL errors
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        SDL_Log("ERROR: OpenGL error during framebuffer resize: 0x%x", err);
+    }
 }

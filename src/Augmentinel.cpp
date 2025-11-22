@@ -5,42 +5,42 @@
 #include "OpenGLRenderer.h"
 #include "Settings.h"
 
-constexpr auto MAX_STATE_FRAMES = 1000;		// max emulated frames in the current state.
-constexpr auto SENTINEL_TURN_TIME = 0.25f;	// 0.25 second animation time for turns.
-constexpr auto DISSOLVE_TIME = 1.4f;		// Dissolve time for created or absorbed objects
-constexpr auto SEEN_FRAME_THRESHOLD = 2;	// Number of frames before trusting seen state.
-constexpr auto PAGE_STEPS = 10;				// Page Up/Down steps for entire landscape list.
-constexpr auto DEFAULT_MOUSE_SPEED = 70;	// default mouse move sensitivity.
-constexpr auto HYPERSPACE_ANGLE = 60;		// a transfer to sky at >=60 degrees for hyperspace.
-constexpr auto SKY_VIEW_ANGLE = 10;			// placing a robot in the sky at >=10 degrees is sky view.
-constexpr auto SKY_VIEW_DISTANCE = 60.0f;	// view distance from player in sky view.
-constexpr auto SKY_VIEW_DISTANCE_VR = 30.0f;// sky view distance in VR mode (lower, due to higher FOV).
-constexpr auto SEEN_HAPTIC_FREQ = 0.1f;		// seconds between haptic pulses when seen.
-constexpr auto TILE_AXIS_SAMPLES = 5;		// tile visibility hit test samples per axis.
-constexpr auto VOLUME_STEP = 10;			// volume adjustment step percentage.
-constexpr auto POINTER_SCALE = 4;			// 3D pointer block scale.
-constexpr auto TEMP_ID_BASE = 0x100;		// Base id for temporary model.
+constexpr auto MAX_STATE_FRAMES = 1000;			 // max emulated frames in the current state.
+constexpr auto SENTINEL_TURN_TIME = 0.25f;	 // 0.25 second animation time for turns.
+constexpr auto DISSOLVE_TIME = 1.4f;				 // Dissolve time for created or absorbed objects
+constexpr auto SEEN_FRAME_THRESHOLD = 2;		 // Number of frames before trusting seen state.
+constexpr auto PAGE_STEPS = 10;							 // Page Up/Down steps for entire landscape list.
+constexpr auto DEFAULT_MOUSE_SPEED = 70;		 // default mouse move sensitivity.
+constexpr auto HYPERSPACE_ANGLE = 60;				 // a transfer to sky at >=60 degrees for hyperspace.
+constexpr auto SKY_VIEW_ANGLE = 10;					 // placing a robot in the sky at >=10 degrees is sky view.
+constexpr auto SKY_VIEW_DISTANCE = 60.0f;		 // view distance from player in sky view.
+constexpr auto SKY_VIEW_DISTANCE_VR = 30.0f; // sky view distance in VR mode (lower, due to higher FOV).
+constexpr auto SEEN_HAPTIC_FREQ = 0.1f;			 // seconds between haptic pulses when seen.
+constexpr auto TILE_AXIS_SAMPLES = 5;				 // tile visibility hit test samples per axis.
+constexpr auto VOLUME_STEP = 10;						 // volume adjustment step percentage.
+constexpr auto POINTER_SCALE = 4;						 // 3D pointer block scale.
+constexpr auto TEMP_ID_BASE = 0x100;				 // Base id for temporary model.
 
 constexpr auto SENTINEL_SNAPSHOT_FILE = L"./sentinel.sna";
 
-static const auto LANDSCAPES_SECTION{ L"Landscapes" };
-static const auto LAST_LANDSCAPE_KEY{ L"LastLandscape" };
-static const auto MOUSE_SPEED_KEY{ L"MouseSpeed" };
-static const auto SOUND_PACK_KEY{ L"SoundPack" };
-static const auto GAME_SPEED_KEY{ L"GameSpeed" };
-static const auto TUNES_ENABLED_KEY{ L"TunesEnabled" };
-static const auto MUSIC_ENABLED_KEY{ L"MusicEnabled" };
-static const auto MUSIC_VOLUME_KEY{ L"MusicVolume" };
-static const auto VERTICAL_FOV_KEY{ L"VerticalFov" };
+static const auto LANDSCAPES_SECTION{L"Landscapes"};
+static const auto LAST_LANDSCAPE_KEY{L"LastLandscape"};
+static const auto MOUSE_SPEED_KEY{L"MouseSpeed"};
+static const auto SOUND_PACK_KEY{L"SoundPack"};
+static const auto GAME_SPEED_KEY{L"GameSpeed"};
+static const auto TUNES_ENABLED_KEY{L"TunesEnabled"};
+static const auto MUSIC_ENABLED_KEY{L"MusicEnabled"};
+static const auto MUSIC_VOLUME_KEY{L"MusicVolume"};
+static const auto VERTICAL_FOV_KEY{L"VerticalFov"};
 
-static const auto SOUND_PACK_DIR{ L"sounds" };
-static const auto MUSIC_SUBDIR{ L"music" };
-static const auto DEFAULT_SOUND_PACK{ L"Commodore Amiga" };
-static const auto DEFAULT_GAME_SPEED{ 120 };
-static const auto DEFAULT_TUNES_ENABLED{ true };
-static const auto DEFAULT_MUSIC_ENABLED{ true };
-static const auto DEFAULT_MUSIC_VOLUME{ 70 };
-static const auto DEFAULT_VERTICAL_FOV{ 45 };
+static const auto SOUND_PACK_DIR{L"sounds"};
+static const auto MUSIC_SUBDIR{L"music"};
+static const auto DEFAULT_SOUND_PACK{L"Commodore Amiga"};
+static const auto DEFAULT_GAME_SPEED{120};
+static const auto DEFAULT_TUNES_ENABLED{true};
+static const auto DEFAULT_MUSIC_ENABLED{true};
+static const auto DEFAULT_MUSIC_VOLUME{70};
+static const auto DEFAULT_VERTICAL_FOV{45};
 
 constexpr auto COMPLETE_TUNE = L"complete.wav";
 constexpr auto DISINTEGRATE_SOUND = L"disintegrate.wav";
@@ -56,83 +56,79 @@ constexpr auto TRANSFER_TUNE = L"transfer.wav";
 constexpr auto TURN_SOUND = L"turn.wav";
 constexpr auto UTURN_TUNE = L"u-turn.wav";
 
-static std::vector<const wchar_t*> effects_and_tunes
-{
-	COMPLETE_TUNE, DISINTEGRATE_SOUND, DISSOLVE_SOUND,
-	GAMEOVER_TUNE, HYPERSPACE_TUNE, MEANIE_SOUND, PING_SOUND, PONG_SOUND,
-	SEEN_SOUND, TITLE_TUNE, TRANSFER_TUNE, TURN_SOUND, UTURN_TUNE
-};
+static std::vector<const wchar_t *> effects_and_tunes{
+		COMPLETE_TUNE, DISINTEGRATE_SOUND, DISSOLVE_SOUND,
+		GAMEOVER_TUNE, HYPERSPACE_TUNE, MEANIE_SOUND, PING_SOUND, PONG_SOUND,
+		SEEN_SOUND, TITLE_TUNE, TRANSFER_TUNE, TURN_SOUND, UTURN_TUNE};
 
 static std::vector<std::wstring> music_files;
 static decltype(music_files.begin()) it_music;
 
 static std::vector<ActionBinding> action_bindings =
-{
-	{ Action::TitleContinue,	{ VK_ANY },					"/actions/game/in/select" },
-	{ Action::LandscapeSelect,	{ VK_RETURN, VK_LBUTTON },	"/actions/game/in/select" },
-	{ Action::LandscapePrev,	{ VK_LEFT },				"/actions/game/in/landscape_prev" },
-	{ Action::LandscapeNext,	{ VK_RIGHT },				"/actions/game/in/landscape_next" },
-	{ Action::LandscapeFirst,	{ VK_HOME },				"/actions/game/in/landscape_first" },
-	{ Action::LandscapeLast,	{ VK_END },					"/actions/game/in/landscape_last" },
-	{ Action::LandscapePgUp,	{ VK_PRIOR },				"/actions/game/in/landscape_pgup" },
-	{ Action::LandscapePgDn,	{ VK_NEXT },				"/actions/game/in/landscape_pgdn" },
-	{ Action::Quit,				{ VK_ESCAPE },				"/actions/game/in/quit" },
-	{ Action::Pause,			{ VK_P, VK_PAUSE },			"/actions/game/in/pause" },
-	{ Action::Absorb,			{ VK_A, VK_LBUTTON },		"/actions/game/in/select" },
-	{ Action::Tree,				{ VK_T },					"/actions/game/in/tree"},
-	{ Action::Boulder,			{ VK_B, VK_RBUTTON },		"/actions/game/in/boulder"},
-	{ Action::Robot,			{ VK_R, VK_MBUTTON },		"/actions/game/in/robot"},
-	{ Action::Transfer,			{ VK_Q, VK_XBUTTON1 },		"/actions/game/in/transfer" },
-	{ Action::Hyperspace,		{ VK_H },					"/actions/game/in/hyperspace" },
-	{ Action::U_Turn,			{ VK_U },					"/actions/game/in/u_turn" },
-	{ Action::ResetHMD,			{ VK_SPACE },				"/actions/game/in/reset_hmd" },
-	{ Action::SkyViewContinue,	{ VK_ANY },					"/actions/game/in/select" },
-	{ Action::Pose_LeftPointer,{},							"/actions/game/in/left_pointer" },
-	{ Action::Pose_RightPointer,{},							"/actions/game/in/right_pointer" },
-	{ Action::Haptic_Seen,		{},							"/actions/game/out/haptic" },
-	{ Action::Haptic_Depleted,	{},							"/actions/game/out/haptic" },
-	{ Action::Haptic_Dead,		{},							"/actions/game/out/haptic" },
-	{ Action::TurnLeft,			{ VK_LEFT },				"/actions/game/in/turn_left" },
-	{ Action::TurnRight,		{ VK_RIGHT },				"/actions/game/in/turn_right" },
-	{ Action::TurnLeft45,		{ VK_PRIOR },				"/actions/game/in/turn_left_45" },
-	{ Action::TurnRight45,		{ VK_NEXT },				"/actions/game/in/turn_right_45" },
-	{ Action::TurnLeft90,		{},							"/actions/game/in/turn_left_90" },
-	{ Action::TurnRight90,		{},							"/actions/game/in/turn_right_90" },
-	{ Action::Turn180,			{},							"/actions/game/in/turn_180" },
-	{ Action::LookUp,			{ VK_UP },					nullptr },
-	{ Action::LookDown,			{ VK_DOWN },				nullptr },
-	{ Action::ToggleTunes,		{ VK_N },					nullptr },
-	{ Action::ToggleMusic,		{ VK_M },					nullptr },
-	{ Action::MusicVolumeUp,	{ VK_OEM_PLUS },			nullptr },
-	{ Action::MusicVolumeDown,	{ VK_OEM_MINUS },			nullptr },
+		{
+				{Action::TitleContinue, {VK_ANY}, "/actions/game/in/select"},
+				{Action::LandscapeSelect, {VK_RETURN, VK_LBUTTON}, "/actions/game/in/select"},
+				{Action::LandscapePrev, {VK_LEFT}, "/actions/game/in/landscape_prev"},
+				{Action::LandscapeNext, {VK_RIGHT}, "/actions/game/in/landscape_next"},
+				{Action::LandscapeFirst, {VK_HOME}, "/actions/game/in/landscape_first"},
+				{Action::LandscapeLast, {VK_END}, "/actions/game/in/landscape_last"},
+				{Action::LandscapePgUp, {VK_PRIOR}, "/actions/game/in/landscape_pgup"},
+				{Action::LandscapePgDn, {VK_NEXT}, "/actions/game/in/landscape_pgdn"},
+				{Action::Quit, {VK_ESCAPE}, "/actions/game/in/quit"},
+				{Action::Pause, {VK_P, VK_PAUSE}, "/actions/game/in/pause"},
+				{Action::Absorb, {VK_A, VK_LBUTTON}, "/actions/game/in/select"},
+				{Action::Tree, {VK_T}, "/actions/game/in/tree"},
+				{Action::Boulder, {VK_B, VK_RBUTTON}, "/actions/game/in/boulder"},
+				{Action::Robot, {VK_R, VK_MBUTTON}, "/actions/game/in/robot"},
+				{Action::Transfer, {VK_Q, VK_XBUTTON1}, "/actions/game/in/transfer"},
+				{Action::Hyperspace, {VK_H}, "/actions/game/in/hyperspace"},
+				{Action::U_Turn, {VK_U}, "/actions/game/in/u_turn"},
+				{Action::ResetHMD, {VK_SPACE}, "/actions/game/in/reset_hmd"},
+				{Action::SkyViewContinue, {VK_ANY}, "/actions/game/in/select"},
+				{Action::Pose_LeftPointer, {}, "/actions/game/in/left_pointer"},
+				{Action::Pose_RightPointer, {}, "/actions/game/in/right_pointer"},
+				{Action::Haptic_Seen, {}, "/actions/game/out/haptic"},
+				{Action::Haptic_Depleted, {}, "/actions/game/out/haptic"},
+				{Action::Haptic_Dead, {}, "/actions/game/out/haptic"},
+				{Action::TurnLeft, {VK_LEFT}, "/actions/game/in/turn_left"},
+				{Action::TurnRight, {VK_RIGHT}, "/actions/game/in/turn_right"},
+				{Action::TurnLeft45, {VK_PRIOR}, "/actions/game/in/turn_left_45"},
+				{Action::TurnRight45, {VK_NEXT}, "/actions/game/in/turn_right_45"},
+				{Action::TurnLeft90, {}, "/actions/game/in/turn_left_90"},
+				{Action::TurnRight90, {}, "/actions/game/in/turn_right_90"},
+				{Action::Turn180, {}, "/actions/game/in/turn_180"},
+				{Action::LookUp, {VK_UP}, nullptr},
+				{Action::LookDown, {VK_DOWN}, nullptr},
+				{Action::ToggleTunes, {VK_N}, nullptr},
+				{Action::ToggleMusic, {VK_M}, nullptr},
+				{Action::MusicVolumeUp, {VK_OEM_PLUS}, nullptr},
+				{Action::MusicVolumeDown, {VK_OEM_MINUS}, nullptr},
 };
 
-std::vector<std::pair<int, std::wstring>> game_speeds
-{
-	{  80, L"Very Easy  (15 seconds)" },
-	{ 100, L"Easy  (12 seconds)" },
-	{ 120, L"Normal  (10 seconds)" },
-	{ 150, L"Hard  (8 seconds)" },
-	{ 200, L"Very Hard  (6 seconds)" },
+std::vector<std::pair<int, std::wstring>> game_speeds{
+		{80, L"Very Easy  (15 seconds)"},
+		{100, L"Easy  (12 seconds)"},
+		{120, L"Normal  (10 seconds)"},
+		{150, L"Hard  (8 seconds)"},
+		{200, L"Very Hard  (6 seconds)"},
 };
 
-std::vector<std::pair<int, std::wstring>> msaa_modes
-{
-	{ 1, L"Off" },
-	{ 2, L"2x" },
-	{ 4, L"4x" },
+std::vector<std::pair<int, std::wstring>> msaa_modes{
+		{1, L"Off"},
+		{2, L"2x"},
+		{4, L"4x"},
 };
 
-Augmentinel::Augmentinel(std::shared_ptr<View>& pView, std::shared_ptr<Audio>& pAudio)
-	: m_pView(pView), m_pAudio(pAudio)
+Augmentinel::Augmentinel(std::shared_ptr<View> &pView, std::shared_ptr<Audio> &pAudio)
+		: m_pView(pView), m_pAudio(pAudio)
 {
 	// Pre-load all sound effects and music from the current sound pack.
 	auto sound_path = fs::path(SOUND_PACK_DIR) / GetSetting(SOUND_PACK_KEY, DEFAULT_SOUND_PACK);
-	for (auto& sound : effects_and_tunes)
+	for (auto &sound : effects_and_tunes)
 		pAudio->LoadWAV(sound_path / sound);
 
 	auto music_path = fs::path(SOUND_PACK_DIR) / MUSIC_SUBDIR;
-	for (auto& p : fs::directory_iterator(music_path))
+	for (auto &p : fs::directory_iterator(music_path))
 	{
 		if (p.path().extension() == ".wav")
 		{
@@ -173,7 +169,7 @@ Augmentinel::Augmentinel(std::shared_ptr<View>& pView, std::shared_ptr<Audio>& p
 	ChangeState(GameState::Reset);
 }
 
-void Augmentinel::PlayTune(const std::wstring& filename)
+void Augmentinel::PlayTune(const std::wstring &filename)
 {
 	if (m_tunes_enabled)
 		m_pAudio->Play(filename, AudioType::Tune);
@@ -213,7 +209,7 @@ void Augmentinel::PlayMusic()
 
 	// Music plays if enabled, in a playing state, and when no tune is playing.
 	auto playing = m_music_enabled && m_music_playing &&
-		!m_pAudio->IsPlaying(AudioType::Tune);
+								 !m_pAudio->IsPlaying(AudioType::Tune);
 
 	if (!m_pAudio->SetMusicPlaying(playing))
 	{
@@ -230,7 +226,7 @@ void Augmentinel::PlayMusic()
 	}
 }
 
-void Augmentinel::Render(IScene* pScene)
+void Augmentinel::Render(IScene *pScene)
 {
 	// Draw game controllers (VR only).
 	pScene->DrawControllers();
@@ -246,7 +242,7 @@ void Augmentinel::Render(IScene* pScene)
 		auto pitch_deg = XMConvertToDegrees(pitch_from_dir(cam_dir));
 		cam_dir.y = 0.0f;
 		auto vDir = XMVector3Normalize(XMLoadFloat3(&cam_dir));
-		auto vRight = -XMVector3Cross(vDir, { 0.0f, 1.0f, 0.0f });
+		auto vRight = -XMVector3Cross(vDir, {0.0f, 1.0f, 0.0f});
 
 		constexpr auto icon_spacing = 0.15f;
 		vPos += vDir * 1.5f;
@@ -254,7 +250,7 @@ void Augmentinel::Render(IScene* pScene)
 
 		auto dissolved = std::min(std::max((pitch_deg + 25.0f) / 5.0f, 0.0f), 1.0f);
 
-		for (auto& icon : m_icons)
+		for (auto &icon : m_icons)
 		{
 			if (m_pView->IsVR())
 			{
@@ -280,7 +276,7 @@ void Augmentinel::Render(IScene* pScene)
 		pScene->DrawModel(m_landscape);
 
 	// Draw any models placed on the landscape.
-	for (auto& model : m_drawn_models)
+	for (auto &model : m_drawn_models)
 	{
 		// Don't draw the player model (except in sky view) as it blocks our view.
 		if (m_player && model.id == m_player.id && m_state != GameState::SkyView)
@@ -291,7 +287,7 @@ void Augmentinel::Render(IScene* pScene)
 	}
 
 	// Landscape title text.
-	for (auto& letter : m_text)
+	for (auto &letter : m_text)
 		pScene->DrawModel(letter);
 
 	if (m_skybox)
@@ -330,8 +326,8 @@ void Augmentinel::Render(IScene* pScene)
 
 		if (m_pView->IsPointerVisible())
 		{
-			auto& vertices = m_pointer_line.EditVertices();
-			for (auto& v : vertices)
+			auto &vertices = m_pointer_line.EditVertices();
+			for (auto &v : vertices)
 			{
 				if (v.pos.z > FLT_EPSILON)
 					v.pos.z = distance;
@@ -411,24 +407,24 @@ void Augmentinel::Frame(float fElapsed)
 			}
 
 			// Extract  text as models.
-			m_drawn_models = m_spectrum->ExtractText();	// "THE SENTINEL"
+			m_drawn_models = m_spectrum->ExtractText(); // "THE SENTINEL"
 
 			m_pView->EnableFreeLook(false);
-			m_pView->SetCameraPosition({ -11.63f, 57.8f, -61.5f });
-			m_pView->SetCameraRotation({ 0.64f, 0.42f, 0.0f });
+			m_pView->SetCameraPosition({-11.63f, 57.8f, -61.5f});
+			m_pView->SetCameraRotation({0.64f, 0.42f, 0.0f});
 
 			m_pView->SetFillColour(DARK_BLUE_PALETTE_INDEX);
 			m_pView->SetPalette(m_spectrum->GetGamePalette(2));
 			m_pView->SetEffect(ViewEffect::ZFade, 0.01f);
 
 			auto sentinel = m_spectrum->GetModel(ModelType::Sentinel);
-			sentinel.pos = { -8.31f, 54.06f, -57.11f };
-			sentinel.rot = { -0.47f, 4.16f, -0.31f };
+			sentinel.pos = {-8.31f, 54.06f, -57.11f};
+			sentinel.rot = {-0.47f, 4.16f, -0.31f};
 			m_drawn_models.push_back(std::move(sentinel));
 
 			auto pedestal = m_spectrum->GetModel(ModelType::Pedestal);
-			pedestal.pos = { -8.5f, 53.19f, -57.58f };
-			pedestal.rot = { -0.47f, 4.16f, -0.31f };
+			pedestal.pos = {-8.5f, 53.19f, -57.58f};
+			pedestal.rot = {-0.47f, 4.16f, -0.31f};
 			m_drawn_models.push_back(std::move(pedestal));
 
 			m_pView->SetEffect(ViewEffect::Fade, 0.0f);
@@ -478,16 +474,16 @@ void Augmentinel::Frame(float fElapsed)
 			m_drawn_models = m_spectrum->ExtractPlacedModels();
 
 			// Remove trees and double size of humanoids.
-			for (auto it = m_drawn_models.begin(); it != m_drawn_models.end(); )
+			for (auto it = m_drawn_models.begin(); it != m_drawn_models.end();)
 			{
-				auto& model = *it;
+				auto &model = *it;
 				switch (model.type)
 				{
 				case ModelType::Sentinel:
 				case ModelType::Sentry:
 				case ModelType::Robot:
-					model.scale = 2.0f;			// double model size
-					model.pos.y += EYE_HEIGHT;	// raise scaled model standing position
+					model.scale = 2.0f;				 // double model size
+					model.pos.y += EYE_HEIGHT; // raise scaled model standing position
 					break;
 				case ModelType::Tree:
 					it = m_drawn_models.erase(it);
@@ -513,14 +509,14 @@ void Augmentinel::Frame(float fElapsed)
 			if (m_pView->IsVR())
 			{
 				m_pView->SetEffect(ViewEffect::ZFade, 0.03f);
-				m_pView->SetCameraPosition({ 15.0f, 30.5f - 8.0f, -57.0f + 35.0f });
-				m_pView->SetCameraRotation({ 0.0f, 0.0f, 0.0f });
+				m_pView->SetCameraPosition({15.0f, 30.5f - 8.0f, -57.0f + 35.0f});
+				m_pView->SetCameraRotation({0.0f, 0.0f, 0.0f});
 			}
 			else
 			{
 				m_pView->SetEffect(ViewEffect::ZFade, 0.02f);
-				m_pView->SetCameraPosition({ 15.0f, 30.5f, -57.0f });
-				m_pView->SetCameraRotation({ PitchToRadians(0xea), YawToRadians(0x00), 0.0f });
+				m_pView->SetCameraPosition({15.0f, 30.5f, -57.0f});
+				m_pView->SetCameraRotation({PitchToRadians(0xea), YawToRadians(0x00), 0.0f});
 			}
 
 			SaveLastLandscape(m_landscape_bcd);
@@ -641,7 +637,7 @@ void Augmentinel::Frame(float fElapsed)
 	{
 		switch (m_substate)
 		{
-		case 0:	// init main game
+		case 0: // init main game
 		{
 			m_pView->SetFogColour(SKY_PALETTE_INDEX);
 			m_pView->SetEffect(ViewEffect::FogDensity, 0.025f);
@@ -663,7 +659,7 @@ void Augmentinel::Frame(float fElapsed)
 			constexpr auto max_pitch = PitchToRadians(SENTINEL_MAX_PITCH);
 			m_pView->SetPitchLimits(min_pitch, max_pitch);
 
-			m_pView->EnableFreeLook(true);
+			// Don't enable freelook yet - wait until after fade-in completes
 			m_pView->SetCameraPosition(m_player.pos);
 			m_pView->SetCameraRotation(m_player.rot);
 
@@ -679,46 +675,17 @@ void Augmentinel::Frame(float fElapsed)
 			break;
 		}
 
-		case 1:	// fade in to main game
+		case 1: // fade in to main game
 		{
-			// Allow keyboard rotation during fade-in for better responsiveness
-			float rot_x{ 0.0f }, rot_y{ 0.0f };
-
-			if (m_pView->InputAction(Action::TurnLeft))
-				rot_y -= XMConvertToRadians(90.0f) * fElapsed;
-			else if (m_pView->InputAction(Action::TurnRight))
-				rot_y += XMConvertToRadians(90.0f) * fElapsed;
-			else if (m_pView->InputAction(Action::TurnLeft45))
-				rot_y -= XMConvertToRadians(45);
-			else if (m_pView->InputAction(Action::TurnRight45))
-				rot_y += XMConvertToRadians(45);
-			else if (m_pView->InputAction(Action::TurnLeft90))
-				rot_y -= XMConvertToRadians(90);
-			else if (m_pView->InputAction(Action::TurnRight90))
-				rot_y += XMConvertToRadians(90);
-			else if (m_pView->InputAction(Action::Turn180))
-				rot_y += XMConvertToRadians(180);
-			else if (m_pView->InputAction(Action::LookUp))
-				rot_x -= XMConvertToRadians(60.0f) * fElapsed;
-			else if (m_pView->InputAction(Action::LookDown))
-				rot_x += XMConvertToRadians(60.0f) * fElapsed;
-
-			if (rot_x || rot_y)
-			{
-				auto rot = m_pView->GetCameraRotation();
-				rot.x += rot_x;
-				rot.y += rot_y;
-				m_pView->SetCameraRotation(rot);
-			}
-
+			// Wait for fade-in to complete
 			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f))
 				break;
-
+			m_pView->EnableFreeLook(true);
 			m_substate++;
 			break;
 		}
 
-		case 2:	// main game
+		case 2: // main game
 		{
 			if (m_pView->IsSuspended())
 			{
@@ -744,7 +711,7 @@ void Augmentinel::Frame(float fElapsed)
 				m_pView->ResetHMD(true);
 			}
 
-			float rot_x{ 0.0f }, rot_y{ 0.0f };
+			float rot_x{0.0f}, rot_y{0.0f};
 
 			// Cursor key rotations - frame-rate independent
 			// Continuous rotation: 90 deg/sec horizontal, 60 deg/sec vertical
@@ -777,9 +744,9 @@ void Augmentinel::Frame(float fElapsed)
 			}
 
 			// Remove any objects that fade been faded out of existence.
-			m_drawn_models.erase(std::remove_if(m_drawn_models.begin(), m_drawn_models.end(), [](auto& m) {
-				return m.dissolved == 1.0f;
-				}), m_drawn_models.end());
+			m_drawn_models.erase(std::remove_if(m_drawn_models.begin(), m_drawn_models.end(), [](auto &m)
+																					{ return m.dissolved == 1.0f; }),
+													 m_drawn_models.end());
 
 			// Run the Spectrum game if there are no active dissolve animations.
 			if (!PlayerAnimationActive())
@@ -809,7 +776,7 @@ void Augmentinel::Frame(float fElapsed)
 
 			// Seen state change? (after thresholding)
 			if ((m_seen_count == SEEN_FRAME_THRESHOLD && !m_seen_sound) ||
-				(m_seen_count == -SEEN_FRAME_THRESHOLD && m_seen_sound))
+					(m_seen_count == -SEEN_FRAME_THRESHOLD && m_seen_sound))
 			{
 				SetSeen(seen_state);
 			}
@@ -829,7 +796,7 @@ void Augmentinel::Frame(float fElapsed)
 			break;
 		}
 
-		case 3:	// paused
+		case 3: // paused
 			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.5f, fElapsed, 0.5f))
 				break;
 
@@ -881,7 +848,7 @@ void Augmentinel::Frame(float fElapsed)
 
 			m_pView->SetPitchLimits(-XM_PI, XM_PI);
 			m_pView->SetCameraPosition(ray_pos);
-			m_pView->SetCameraRotation({ pitch_from_dir(ray_dir), yaw_from_dir(ray_dir), 0.0f });
+			m_pView->SetCameraRotation({pitch_from_dir(ray_dir), yaw_from_dir(ray_dir), 0.0f});
 			m_pView->SetEffect(ViewEffect::FogDensity, 0.0125f);
 
 			m_substate++;
@@ -933,11 +900,11 @@ void Augmentinel::Frame(float fElapsed)
 			m_landscape = {};
 			m_skybox = {};
 
-			m_drawn_models = { m_spectrum->GetModel(1, true) };
+			m_drawn_models = {m_spectrum->GetModel(1, true)};
 			m_player = m_spectrum->GetModel(2, true);
 
 			m_pView->SetCameraPosition(m_player.pos);
-			m_pView->SetCameraRotation({ PitchToRadians(0xf4), 0.0f, 0.0f });
+			m_pView->SetCameraRotation({PitchToRadians(0xf4), 0.0f, 0.0f});
 			m_pView->SetVerticalFOV(SENTINEL_VERT_FOV);
 
 			if (m_pView->IsVR())
@@ -949,9 +916,9 @@ void Augmentinel::Frame(float fElapsed)
 
 				// Determine how much the VR view is rotated compared to the camera,
 				// and adjust the view so the killer is shown in front of the player.
-				m_pView->SetCameraRotation({ 0.0f, 0.0f, 0.0f });
+				m_pView->SetCameraRotation({0.0f, 0.0f, 0.0f});
 				auto view_yaw = yaw_from_dir(m_pView->GetViewDirection());
-				m_pView->SetCameraRotation({ 0.0f, -view_yaw, 0.0f });
+				m_pView->SetCameraRotation({0.0f, -view_yaw, 0.0f});
 			}
 
 			m_pView->SetEffect(ViewEffect::Fade, 1.0f);
@@ -976,12 +943,12 @@ void Augmentinel::Frame(float fElapsed)
 
 		switch (m_substate)
 		{
-		case 0:	// fade in from black
+		case 0: // fade in from black
 			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f - min_fade, fElapsed, 2.0f / min_fade))
 				m_substate++;
 			break;
 
-		case 1:	// slow fade out to black
+		case 1: // slow fade out to black
 			if (m_pView->TransitionEffect(ViewEffect::Fade, 0.99f, fElapsed, 4.0f / min_fade))
 				m_substate++;
 			break;
@@ -1023,9 +990,9 @@ void Augmentinel::Frame(float fElapsed)
 	}
 
 	m_pAudio->PositionListener(
-		m_pView->GetViewPosition(),
-		m_pView->GetViewDirection(),
-		m_pView->GetUpDirection());
+			m_pView->GetViewPosition(),
+			m_pView->GetViewDirection(),
+			m_pView->GetUpDirection());
 }
 
 bool Augmentinel::WantsToQuit() const
@@ -1033,7 +1000,7 @@ bool Augmentinel::WantsToQuit() const
 	return m_wantsToQuit;
 }
 
-void Augmentinel::AddText(const std::string& str, float x_centre, float y, float z, int colour, bool reversed)
+void Augmentinel::AddText(const std::string &str, float x_centre, float y, float z, int colour, bool reversed)
 {
 	constexpr auto spacing = 1.4f;
 	constexpr auto scale = 1.8f;
@@ -1051,7 +1018,7 @@ void Augmentinel::AddText(const std::string& str, float x_centre, float y, float
 				ch = 'O';
 
 			auto model = m_spectrum->CharToModel(ch, colour);
-			model.pos = { x, y, z };
+			model.pos = {x, y, z};
 			model.rot.y = yaw;
 			model.scale = scale;
 			m_text.push_back(std::move(model));
@@ -1063,9 +1030,8 @@ void Augmentinel::AddText(const std::string& str, float x_centre, float y, float
 
 bool Augmentinel::PlayerAnimationActive() const
 {
-	return std::any_of(m_animations.begin(), m_animations.end(), [](const Animation& ani) {
-		return ani.type == AnimationType::Dissolve && !ani.interruptible;
-		});
+	return std::any_of(m_animations.begin(), m_animations.end(), [](const Animation &ani)
+										 { return ani.type == AnimationType::Dissolve && !ani.interruptible; });
 }
 
 void Augmentinel::SetSeen(SeenState seen_state)
@@ -1097,7 +1063,7 @@ void Augmentinel::LoadLandscapeCodes()
 	// Add the secret code for landscape 0000.
 	m_codes[0x0000] = SPECTRUM_LANDSCAPE_0000_CODE;
 
-	for (auto& landscape_key : GetSettingKeys(LANDSCAPES_SECTION))
+	for (auto &landscape_key : GetSettingKeys(LANDSCAPES_SECTION))
 	{
 		auto landscape_bcd = std::stoul(landscape_key.c_str(), nullptr, 16);
 		auto secret_code_bcd = std::stoul(GetSetting(landscape_key, L"0", LANDSCAPES_SECTION), nullptr, 16);
@@ -1143,14 +1109,14 @@ void Augmentinel::RemoveLandscapeCode(int landscape_bcd)
 	RemoveSetting(ss_landscape.str(), LANDSCAPES_SECTION);
 }
 
-bool Augmentinel::SceneRayTest(XMVECTOR vRayPos, XMVECTOR vRayDir, RayTarget& hit, int ignore_id)
+bool Augmentinel::SceneRayTest(XMVECTOR vRayPos, XMVECTOR vRayDir, RayTarget &hit, int ignore_id)
 {
 	std::map<float, RayTarget> hits;
 
 	if (m_landscape.RayTest(vRayPos, vRayDir, hit))
 		hits[hit.distance] = hit;
 
-	for (auto& model : m_drawn_models)
+	for (auto &model : m_drawn_models)
 	{
 		if (model.id >= TEMP_ID_BASE || ignore_id >= 0 && model.id == ignore_id)
 			continue;
@@ -1169,7 +1135,7 @@ bool Augmentinel::SceneRayTest(XMVECTOR vRayPos, XMVECTOR vRayDir, RayTarget& hi
 	return false;
 }
 
-bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model& model, int ignore_id)
+bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model &model, int ignore_id)
 {
 	struct CornerRay
 	{
@@ -1181,7 +1147,7 @@ bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model& model, 
 	std::vector<CornerRay> corner_rays;
 
 	// Cast rays from the camera to each vertex of the bounding box.
-	for (auto& corner : model.GetBoundingBox())
+	for (auto &corner : model.GetBoundingBox())
 	{
 		// Calculate the vector to the corner vertex in world space, and its unit direction vector.
 		auto vRayCorner = corner - vRayPos;
@@ -1196,7 +1162,7 @@ bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model& model, 
 		if (!m_landscape.RayTest(vRayPos, vRayDir, hit) || hit.distance > corner_dist)
 		{
 			// The ray didn't hit the landscape, or it hit the landscape behind the bounding box.
-			corner_rays.push_back({ vRayDir, corner_dist, 0 });
+			corner_rays.push_back({vRayDir, corner_dist, 0});
 		}
 	}
 
@@ -1204,15 +1170,15 @@ bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model& model, 
 	if (corner_rays.empty())
 		return false;
 
-	std::set<Model*> ray_hits;
-	for (auto& m : m_drawn_models)
+	std::set<Model *> ray_hits;
+	for (auto &m : m_drawn_models)
 	{
 		// Ignore the model we're testing against, and any supplied id.
 		if (m.id == model.id || (ignore_id >= 0 && m.id == ignore_id))
 			continue;
 
 		// Test the remaining rays against the bounding box for each model.
-		for (auto& ray : corner_rays)
+		for (auto &ray : corner_rays)
 		{
 			float dist;
 
@@ -1229,9 +1195,9 @@ bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model& model, 
 	auto mModelWorld = model.GetWorldMatrix();
 
 	// Test the visibility of each vertex in the target model.
-	for (auto& vertex : *(model.m_pVertices))
+	for (auto &vertex : *(model.m_pVertices))
 	{
-		XMVECTOR vVertex{ vertex.pos.x, vertex.pos.y, vertex.pos.z, 1.0f };
+		XMVECTOR vVertex{vertex.pos.x, vertex.pos.y, vertex.pos.z, 1.0f};
 		auto vVertexWorld = XMVector4Transform(vVertex, mModelWorld);
 
 		auto vRayVertex = vVertexWorld - vRayPos;
@@ -1240,7 +1206,7 @@ bool Augmentinel::SceneModelVisible(const XMVECTOR vRayPos, const Model& model, 
 		float vertex_dist{};
 		XMStoreFloat(&vertex_dist, XMVector3Length(vRayVertex));
 
-		float closest_dist{ vertex_dist };
+		float closest_dist{vertex_dist};
 		RayTarget hit;
 
 		// Detailed test against each tile in the landscape.
@@ -1290,13 +1256,13 @@ bool Augmentinel::SceneTileVisible(const XMVECTOR vRayPos, int tile_x, int tile_
 			constexpr auto step = 1.0f / (TILE_AXIS_SAMPLES - 1);
 			auto idx = (z * TILE_AXIS_SAMPLES) + x;
 
-			const auto& [min_x, y, min_z] = corner_pos[0];
-			grid_vertices[idx] = { min_x + step * x, y, min_z + step * z, 1.0f };
+			const auto &[min_x, y, min_z] = corner_pos[0];
+			grid_vertices[idx] = {min_x + step * x, y, min_z + step * z, 1.0f};
 		}
 	}
 
 	// Cast rays from the camera to each grid position on the tile.
-	for (auto& v : grid_vertices)
+	for (auto &v : grid_vertices)
 	{
 		// Calculate the vector to the corner vertex in world space, and its unit direction vector.
 		auto vRay = v - vRayPos;
@@ -1317,11 +1283,10 @@ bool Augmentinel::SceneTileVisible(const XMVECTOR vRayPos, int tile_x, int tile_
 	return false;
 }
 
-Model* Augmentinel::FindModelById(int id)
+Model *Augmentinel::FindModelById(int id)
 {
-	auto it = std::find_if(m_drawn_models.begin(), m_drawn_models.end(), [&](auto& m) {
-		return m.id == id;
-		});
+	auto it = std::find_if(m_drawn_models.begin(), m_drawn_models.end(), [&](auto &m)
+												 { return m.id == id; });
 
 	return (it != m_drawn_models.end()) ? &(*it) : nullptr;
 }
@@ -1331,16 +1296,16 @@ std::vector<Model> Augmentinel::GetModelStack(int tile_x, int tile_z)
 	std::vector<Model> models;
 
 	std::copy_if(m_drawn_models.begin(), m_drawn_models.end(),
-		std::back_inserter(models), [&](auto& m) {
-			return m.id < TEMP_ID_BASE&&
-				static_cast<int>(m.pos.x) == tile_x &&
-				static_cast<int>(m.pos.z) == tile_z;
-			});
+							 std::back_inserter(models), [&](auto &m)
+							 { return m.id < TEMP_ID_BASE &&
+												static_cast<int>(m.pos.x) == tile_x &&
+												static_cast<int>(m.pos.z) == tile_z; });
 
 	std::sort(models.begin(), models.end(),
-		[](const auto& a, const auto& b) {
-			return a.pos.y > b.pos.y;
-			});
+						[](const auto &a, const auto &b)
+						{
+							return a.pos.y > b.pos.y;
+						});
 
 	return models;
 }
@@ -1372,7 +1337,7 @@ void Augmentinel::OnTitleScreen()
 	ChangeState(GameState::TitleScreen);
 }
 
-void Augmentinel::OnLandscapeInput(int& landscape_bcd, uint32_t& secret_code_bcd)
+void Augmentinel::OnLandscapeInput(int &landscape_bcd, uint32_t &secret_code_bcd)
 {
 	landscape_bcd = m_landscape_bcd;
 	secret_code_bcd = m_codes[landscape_bcd];
@@ -1396,7 +1361,7 @@ void Augmentinel::OnPlayerDead()
 	m_music_playing = false;
 }
 
-void Augmentinel::OnInputAction(uint8_t& action)
+void Augmentinel::OnInputAction(uint8_t &action)
 {
 	// Return if any player animations are still active.
 	if (PlayerAnimationActive())
@@ -1429,20 +1394,23 @@ void Augmentinel::OnInputAction(uint8_t& action)
 			}
 		}
 
-		action = 0x00;	// create robot
+		action = 0x00; // create robot
 	}
-	else if (m_pView->InputAction(Action::Tree)) {
-		action = 0x02;	// create tree
+	else if (m_pView->InputAction(Action::Tree))
+	{
+		action = 0x02; // create tree
 	}
-	else if (m_pView->InputAction(Action::Boulder)) {
-		action = 0x03;	// create boulder
+	else if (m_pView->InputAction(Action::Boulder))
+	{
+		action = 0x03; // create boulder
 	}
-	else if (m_pView->InputAction(Action::Absorb)) {
-		action = 0x20;	// absorb
+	else if (m_pView->InputAction(Action::Absorb))
+	{
+		action = 0x20; // absorb
 	}
 	else if (m_pView->InputAction(Action::Transfer))
 	{
-		action = 0x21;	// transfer
+		action = 0x21; // transfer
 
 		// Is the selection target pitched at a steep enough angle to consider?
 		if (XMConvertToDegrees(ray_pitch) < -HYPERSPACE_ANGLE)
@@ -1454,9 +1422,9 @@ void Augmentinel::OnInputAction(uint8_t& action)
 		}
 	}
 	else if (m_pView->InputAction(Action::Hyperspace))
-		action = 0x22;	// hyperspace
+		action = 0x22; // hyperspace
 	else if (m_pView->InputAction(Action::U_Turn))
-		action = 0x23;	// u-turn
+		action = 0x23; // u-turn
 }
 
 void Augmentinel::OnGameModelChanged(int id, bool player_initiated)
@@ -1478,14 +1446,12 @@ void Augmentinel::OnGameModelChanged(int id, bool player_initiated)
 		// Change the id of the destroyed model so the slot can be reused.
 		existing_model->id = fade_out_id++;
 
-		m_animations.push_back({
-			AnimationType::Dissolve,
-			existing_model->id,
-			DISSOLVE_TIME,
-			0.0f,
-			1.0f,
-			!player_initiated
-			});
+		m_animations.push_back({AnimationType::Dissolve,
+														existing_model->id,
+														DISSOLVE_TIME,
+														0.0f,
+														1.0f,
+														!player_initiated});
 	}
 	else
 	{
@@ -1497,14 +1463,12 @@ void Augmentinel::OnGameModelChanged(int id, bool player_initiated)
 			new_model.dissolved = 1.0f;
 			m_drawn_models.push_back(std::move(new_model));
 
-			m_animations.push_back({
-				AnimationType::Dissolve,
-				id,
-				DISSOLVE_TIME,
-				1.0f,
-				0.0f,
-				!player_initiated
-				});
+			m_animations.push_back({AnimationType::Dissolve,
+															id,
+															DISSOLVE_TIME,
+															1.0f,
+															0.0f,
+															!player_initiated});
 		}
 		else
 		{
@@ -1513,14 +1477,12 @@ void Augmentinel::OnGameModelChanged(int id, bool player_initiated)
 				// Change the id of the old model so the slot can be reused.
 				existing_model->id = fade_out_id++;
 
-				m_animations.push_back({
-					AnimationType::Dissolve,
-					existing_model->id,
-					DISSOLVE_TIME,
-					0.0f,
-					1.0f,
-					!player_initiated
-					});
+				m_animations.push_back({AnimationType::Dissolve,
+																existing_model->id,
+																DISSOLVE_TIME,
+																0.0f,
+																1.0f,
+																!player_initiated});
 
 				m_pAudio->Play(DISSOLVE_SOUND, AudioType::Effect, new_model.pos);
 
@@ -1528,14 +1490,12 @@ void Augmentinel::OnGameModelChanged(int id, bool player_initiated)
 				new_model.dissolved = 1.0f;
 				m_drawn_models.push_back(std::move(new_model));
 
-				m_animations.push_back({
-					AnimationType::Dissolve,
-					id,
-					DISSOLVE_TIME,
-					1.0f,
-					0.0f,
-					!player_initiated
-					});
+				m_animations.push_back({AnimationType::Dissolve,
+																id,
+																DISSOLVE_TIME,
+																1.0f,
+																0.0f,
+																!player_initiated});
 			}
 			// Model rotated?
 			else if (new_model.rot.y != existing_model->rot.y)
@@ -1547,25 +1507,24 @@ void Augmentinel::OnGameModelChanged(int id, bool player_initiated)
 				else if ((current_rot_y - new_model.rot.y) >= XM_PI)
 					current_rot_y -= XM_2PI;
 
-				m_animations.push_back({
-					AnimationType::Yaw,
-					id,
-					SENTINEL_TURN_TIME,
-					current_rot_y,
-					new_model.rot.y
-					});
+				m_animations.push_back({AnimationType::Yaw,
+																id,
+																SENTINEL_TURN_TIME,
+																current_rot_y,
+																new_model.rot.y});
 			}
 		}
 	}
 }
 
-std::pair<float, float> LandscapeSlopeUpOffset(const XMFLOAT3& v1, const XMFLOAT3& v2, const XMFLOAT3& v3)
+std::pair<float, float> LandscapeSlopeUpOffset(const XMFLOAT3 &v1, const XMFLOAT3 &v2, const XMFLOAT3 &v3)
 {
 	float dx = 0, dz = 0;
-	std::array<XMFLOAT3, 3> tri{ v1, v2, v3 };
-	std::sort(tri.begin(), tri.end(), [](auto& a, auto& b) { return a.y < b.y; });
+	std::array<XMFLOAT3, 3> tri{v1, v2, v3};
+	std::sort(tri.begin(), tri.end(), [](auto &a, auto &b)
+						{ return a.y < b.y; });
 
-	if (tri[1].y != tri[2].y)	// tri[2] at top
+	if (tri[1].y != tri[2].y) // tri[2] at top
 	{
 		auto align0 = tri[2].x == tri[0].x || tri[2].z == tri[0].z;
 		auto align1 = tri[2].x == tri[1].x || tri[2].z == tri[1].z;
@@ -1577,7 +1536,7 @@ std::pair<float, float> LandscapeSlopeUpOffset(const XMFLOAT3& v1, const XMFLOAT
 		}
 		else
 		{
-			auto& bot = align0 ? tri[0] : tri[1];
+			auto &bot = align0 ? tri[0] : tri[1];
 			dx = tri[2].x - bot.x;
 			dz = tri[2].z - bot.z;
 		}
@@ -1594,7 +1553,7 @@ std::pair<float, float> LandscapeSlopeUpOffset(const XMFLOAT3& v1, const XMFLOAT
 		}
 		else
 		{
-			auto& top = align1 ? tri[1] : tri[2];
+			auto &top = align1 ? tri[1] : tri[2];
 			dx = top.x - tri[0].x;
 			dz = top.z - tri[0].z;
 		}
@@ -1603,13 +1562,13 @@ std::pair<float, float> LandscapeSlopeUpOffset(const XMFLOAT3& v1, const XMFLOAT
 	return std::make_pair(dx, dz);
 }
 
-bool Augmentinel::OnTargetActionTile(InputAction action, int& tile_x, int& tile_z)
+bool Augmentinel::OnTargetActionTile(InputAction action, int &tile_x, int &tile_z)
 {
-	bool allow{ false };
+	bool allow{false};
 
 	// Final visibility is performed against the player position, which
 	// differs from the selection ray position when playing in VR.
-	XMVECTOR vPlayerPos{ m_player.pos.x, m_player.pos.y, m_player.pos.z, 1.0f };
+	XMVECTOR vPlayerPos{m_player.pos.x, m_player.pos.y, m_player.pos.z, 1.0f};
 
 	XMVECTOR vRayPos, vRayDir;
 	m_pView->GetSelectionRay(vRayPos, vRayDir);
@@ -1639,20 +1598,20 @@ bool Augmentinel::OnTargetActionTile(InputAction action, int& tile_x, int& tile_
 			m_spectrum->LandscapeVertexIndexToTile(static_cast<int>(vertex_index), tile_x, tile_z);
 
 			// Get the vertices of the triangle.
-			auto& vertices = *(model->m_pVertices);
-			auto& indices = *(model->m_pIndices);
+			auto &vertices = *(model->m_pVertices);
+			auto &indices = *(model->m_pIndices);
 
-			auto& v1 = vertices[indices[vertex_index + 0]].pos;
-			auto& v2 = vertices[indices[vertex_index + 1]].pos;
-			auto& v3 = vertices[indices[vertex_index + 2]].pos;
+			auto &v1 = vertices[indices[vertex_index + 0]].pos;
+			auto &v2 = vertices[indices[vertex_index + 1]].pos;
+			auto &v3 = vertices[indices[vertex_index + 2]].pos;
 
 			// If the tile isn't level, the player may have selected a neighbouring slope.
 			// Move the selection up the slope to help targetting distant tiles in VR.
 			if (v1.y != v2.y || v2.y != v3.y)
 			{
-				auto& v4 = vertices[indices[vertex_index + 3]].pos;
-				auto& v5 = vertices[indices[vertex_index + 4]].pos;
-				auto& v6 = vertices[indices[vertex_index + 5]].pos;
+				auto &v4 = vertices[indices[vertex_index + 3]].pos;
+				auto &v5 = vertices[indices[vertex_index + 4]].pos;
+				auto &v6 = vertices[indices[vertex_index + 5]].pos;
 
 				float dx = 0.0f, dz = 0.0f;
 				auto [dx0, dz0] = LandscapeSlopeUpOffset(v1, v2, v3);
@@ -1660,39 +1619,41 @@ bool Augmentinel::OnTargetActionTile(InputAction action, int& tile_x, int& tile_
 
 				switch (m_spectrum->GetTileShape(tile_x, tile_z))
 				{
-				case 0b0000:	// flat
-				case 0b1000:	// unused
+				case 0b0000: // flat
+				case 0b1000: // unused
 					break;
 
-				case 0b0001:	// slope facing back
-				case 0b0101:	// slope facing right
-				case 0b1001:	// slope facing front
-				case 0b1101:	// slope facing left
+				case 0b0001: // slope facing back
+				case 0b0101: // slope facing right
+				case 0b1001: // slope facing front
+				case 0b1101: // slope facing left
 					dx = dx0;
 					dz = dz0;
 					break;
 
-				case 0b0010:	// inside corner, facing front
-				case 0b0011:	// inside corner, facing back
-				case 0b0111:	// inside corner, facing front right
-				case 0b1111:	// inside edge, facing back left
+				case 0b0010: // inside corner, facing front
+				case 0b0011: // inside corner, facing back
+				case 0b0111: // inside corner, facing front right
+				case 0b1111: // inside edge, facing back left
 					dx = tri_index ? dx1 : dx0;
 					dz = tri_index ? dz1 : dz0;
 					break;
 
-				case 0b1010:	// outside corner, facing front left
-				case 0b1011:	// outside corner, facing back right
-				case 0b0110:	// outside corner, facing front right
-				case 0b1110:	// outside edge, facing back left
-				case 0b1100:	// flat diagonal diamond
-				case 0b0100:	// stretched faces
+				case 0b1010: // outside corner, facing front left
+				case 0b1011: // outside corner, facing back right
+				case 0b0110: // outside corner, facing front right
+				case 0b1110: // outside edge, facing back left
+				case 0b1100: // flat diagonal diamond
+				case 0b0100: // stretched faces
 					dx = dx0 + dx1;
 					dz = dz0 + dz1;
 					break;
 				}
 
-				tile_x += (dx > 0) ? 1 : (dx < 0) ? -1 : 0;
-				tile_z += (dz > 0) ? 1 : (dz < 0) ? -1 : 0;
+				tile_x += (dx > 0) ? 1 : (dx < 0) ? -1
+																					: 0;
+				tile_z += (dz > 0) ? 1 : (dz < 0) ? -1
+																					: 0;
 
 				tile_x = std::max(0, std::min(tile_x, SENTINEL_MAP_SIZE - 2));
 				tile_z = std::max(0, std::min(tile_z, SENTINEL_MAP_SIZE - 2));
@@ -1796,11 +1757,11 @@ void Augmentinel::OnAddEnergySymbol(int symbol_idx, int x_offset)
 {
 	// Orthographic screen coordinates: x=[-800,800], y=[-450,450] for 1600x900
 	// Position icons at top-left of screen (matching PC version)
-	static constexpr auto x_base = -795.0f;  // Near left edge
-	static constexpr auto y = 420.0f;        // Near top edge
+	static constexpr auto x_base = -795.0f; // Near left edge
+	static constexpr auto y = 420.0f;				// Near top edge
 	static constexpr auto z = FAR_CLIP / 2.0f;
-	static constexpr auto scale = 27.0f;     // Icon size matching PC version
-	static constexpr auto spacing = 15.0f;   // Tight spacing like PC version
+	static constexpr auto scale = 27.0f;	 // Icon size matching PC version
+	static constexpr auto spacing = 15.0f; // Tight spacing like PC version
 
 	// Clear existing icons if the panel is being redrawn.
 	if (x_offset == 0)
@@ -1809,17 +1770,17 @@ void Augmentinel::OnAddEnergySymbol(int symbol_idx, int x_offset)
 	auto colour_idx = -1;
 	switch (symbol_idx)
 	{
-	case 1:					// robot
-		colour_idx = 12;	// light blue
+	case 1:						 // robot
+		colour_idx = 12; // light blue
 		break;
-	case 2:					// tree
-		colour_idx = 5;		// green
+	case 2:						// tree
+		colour_idx = 5; // green
 		break;
-	case 4:					// boulder
-		colour_idx = 11;	// cyan
+	case 4:						 // boulder
+		colour_idx = 11; // cyan
 		break;
-	case 6:					// golden robot
-		colour_idx = 9;		// yellow
+	case 6:						// golden robot
+		colour_idx = 9; // yellow
 		break;
 	}
 
@@ -1829,7 +1790,7 @@ void Augmentinel::OnAddEnergySymbol(int symbol_idx, int x_offset)
 
 		if (!m_pView->IsVR())
 		{
-			icon.pos = { x_base + spacing * x_offset, y, z };
+			icon.pos = {x_base + spacing * x_offset, y, z};
 			icon.scale = scale;
 			icon.orthographic = true;
 			icon.lighting = false;
@@ -1849,24 +1810,24 @@ void Augmentinel::OnPlayTune(int tune_number)
 
 	switch (tune_number)
 	{
-	case 0x00:	// Hyperspace
+	case 0x00: // Hyperspace
 		PlayTune(HYPERSPACE_TUNE);
 		blank_view = true;
 		m_music_playing = !m_tunes_enabled;
 		break;
-	case 0x19:	// Robot transfer
+	case 0x19: // Robot transfer
 		PlayTune(TRANSFER_TUNE);
 		blank_view = true;
 		break;
-	case 0x20:	// U-turn
+	case 0x20: // U-turn
 		PlayTune(UTURN_TUNE);
 		blank_view = true;
 		break;
-	case 0x32:	// Game Over
+	case 0x32: // Game Over
 		ChangeState(GameState::ShowKiller);
-		m_pAudio->Play(GAMEOVER_TUNE, AudioType::Tune);	// always played
+		m_pAudio->Play(GAMEOVER_TUNE, AudioType::Tune); // always played
 		break;
-	case 0x42:	// Landscape complete
+	case 0x42: // Landscape complete
 		ChangeState(GameState::Complete);
 		PlayTune(COMPLETE_TUNE);
 		break;
@@ -1893,19 +1854,19 @@ void Augmentinel::OnSoundEffect(int effect_number, int idx)
 
 	switch (effect_number)
 	{
-	case 0:	// Sentinel/sentry turn
+	case 0: // Sentinel/sentry turn
 		m_pAudio->Play(TURN_SOUND, AudioType::Effect, source_pos);
 		break;
-	case 1:	// Meanie turn
+	case 1: // Meanie turn
 		m_pAudio->Play(MEANIE_SOUND, AudioType::Effect, source_pos);
 		break;
-	case 2:	// Absorb sound (unused on Spectrum)
+	case 2: // Absorb sound (unused on Spectrum)
 		break;
-	case 5:	// Energy depleted
+	case 5: // Energy depleted
 		m_pAudio->Play(PONG_SOUND);
 		m_pView->OutputAction(Action::Haptic_Depleted);
 		break;
-	case 0xff:	// Error beep
+	case 0xff: // Error beep
 		m_pAudio->Play(PING_SOUND);
 		break;
 	default:
@@ -1920,15 +1881,15 @@ void Augmentinel::OnSoundEffect(int effect_number, int idx)
 bool AddToolTip(HWND hwndControl, LPCWSTR pszText)
 {
 	auto hwndTip = CreateWindowEx(
-		NULL, TOOLTIPS_CLASS, NULL,
-		WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-		GetParent(hwndControl), NULL, GetModuleHandle(NULL), NULL);
+			NULL, TOOLTIPS_CLASS, NULL,
+			WS_POPUP | TTS_NOPREFIX | TTS_ALWAYSTIP,
+			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+			GetParent(hwndControl), NULL, GetModuleHandle(NULL), NULL);
 
 	if (!hwndTip)
 		return false;
 
-	TOOLINFO toolInfo{ sizeof(toolInfo) };
+	TOOLINFO toolInfo{sizeof(toolInfo)};
 	toolInfo.hwnd = GetParent(hwndControl);
 	toolInfo.uFlags = TTF_IDISHWND | TTF_SUBCLASS;
 	toolInfo.uId = reinterpret_cast<UINT_PTR>(hwndControl);
@@ -2013,16 +1974,16 @@ static INT_PTR CALLBACK OptionsDialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, L
 		SendMessage(hwndMusicVolume, TBM_SETPOS, TRUE, music_volume / 10);
 
 		std::vector<std::wstring> sound_packs;
-		for (auto& p : fs::directory_iterator(SOUND_PACK_DIR))
+		for (auto &p : fs::directory_iterator(SOUND_PACK_DIR))
 		{
 			auto filename = p.path().filename().wstring();
 
 			// Any sub-directory not starting with a dot is considered a sound pack.
 			if (p.is_directory() && filename[0] != '.')
 			{
-				auto missing_files{ false };
+				auto missing_files{false};
 
-				for (auto& wav_file : effects_and_tunes)
+				for (auto &wav_file : effects_and_tunes)
 				{
 					// Reject the pack if any required sounds are missing.
 					if (!fs::exists(p / wav_file))
@@ -2038,12 +1999,11 @@ static INT_PTR CALLBACK OptionsDialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, L
 		}
 
 		SendMessage(hwndSoundPack, CB_RESETCONTENT, 0, 0L);
-		for (auto& sp : sound_packs)
+		for (auto &sp : sound_packs)
 			SendMessage(hwndSoundPack, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(sp.c_str()));
 
 		auto cursel = SendMessage(hwndSoundPack, CB_FINDSTRING, 0, reinterpret_cast<LPARAM>(sound_pack.c_str()));
 		SendMessage(hwndSoundPack, CB_SETCURSEL, (cursel == CB_ERR) ? 0 : cursel, 0L);
-
 
 		if (msaa_samples != 1 && msaa_samples != 2 && msaa_samples != 4)
 			msaa_samples = DEFAULT_MSAA_SAMPLES;
@@ -2051,7 +2011,7 @@ static INT_PTR CALLBACK OptionsDialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, L
 		SendMessage(hwndMsaaSamples, CB_RESETCONTENT, 0, 0L);
 		for (size_t i = 0; i < msaa_modes.size(); ++i)
 		{
-			auto& mm = msaa_modes[i];
+			auto &mm = msaa_modes[i];
 			SendMessage(hwndMsaaSamples, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(mm.second.c_str()));
 
 			if (mm.first == msaa_samples)
@@ -2061,7 +2021,7 @@ static INT_PTR CALLBACK OptionsDialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, L
 		SendMessage(hwndGameSpeed, CB_RESETCONTENT, 0, 0L);
 		for (size_t i = 0; i < game_speeds.size(); ++i)
 		{
-			auto& gs = game_speeds[i];
+			auto &gs = game_speeds[i];
 			SendMessage(hwndGameSpeed, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(gs.second.c_str()));
 
 			if (gs.first == game_speed)
@@ -2123,8 +2083,8 @@ static INT_PTR CALLBACK OptionsDialogProc(HWND hdlg, UINT uMsg, WPARAM wParam, L
 			Button_SetCheck(hwndInvertMouse, DEFAULT_INVERT_MOUSE ? BST_CHECKED : BST_UNCHECKED);
 			SendMessage(hwndMouseSpeed, TBM_SETPOS, TRUE, DEFAULT_MOUSE_SPEED);
 			SendMessage(hwndSoundPack, CB_SELECTSTRING, 0, reinterpret_cast<LPARAM>(DEFAULT_SOUND_PACK));
-			SendMessage(hwndMsaaSamples, CB_SETCURSEL, 2, 0L);	// index of "4x"!
-			SendMessage(hwndGameSpeed, CB_SETCURSEL, 2, 0L);	// index of "Normal"!
+			SendMessage(hwndMsaaSamples, CB_SETCURSEL, 2, 0L); // index of "4x"!
+			SendMessage(hwndGameSpeed, CB_SETCURSEL, 2, 0L);	 // index of "Normal"!
 			Button_SetCheck(hwndHrtfEnabled, DEFAULT_HRTF_ENABLED ? BST_CHECKED : BST_UNCHECKED);
 			Button_SetCheck(hwndTunesEnabled, DEFAULT_TUNES_ENABLED ? BST_CHECKED : BST_UNCHECKED);
 			Button_SetCheck(hwndMusicEnabled, DEFAULT_MUSIC_ENABLED ? BST_CHECKED : BST_UNCHECKED);

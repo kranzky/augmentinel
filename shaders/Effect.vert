@@ -18,6 +18,6 @@ void main()
 
     gl_Position = vec4(x, y, 0.0, 1.0);
 
-    // Flip y to correct orientation for texture sampling
-    v_texcoord = vec2(u, 1.0 - v);
+    // OpenGL framebuffers don't need Y-flip (unlike D3D)
+    v_texcoord = vec2(u, v);
 }
