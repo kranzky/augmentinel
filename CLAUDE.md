@@ -18,8 +18,8 @@ When working on this codebase, check:
 
 ### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
 
-**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅ 🎉
-**Current**: Phase 4 - Polish & Remaining Features
+**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅, Phase 4.1 Complete ✅, Phase 4.4 Complete ✅
+**Current**: Phase 4 - Game Integration (Audio & UI implemented)
 
 **Build:**
 ```bash
@@ -46,9 +46,10 @@ cmake --build .
 - ✅ Full game loop with input system (keyboard + mouse)
 - ✅ Object creation and absorption working
 - ✅ Complete gameplay - playable through full levels
-- ⏳ Audio system (Phase 4.1)
+- ✅ Audio system (Phase 4.1) - SDL_mixer with Amiga sounds/music
+- ✅ Energy UI display (Phase 4.4) - Orthographic projection, icons in top-left
 - ⏳ Settings persistence (Phase 4.2)
-- ⏳ Energy UI display (Phase 4.4)
+- ⏳ Game state testing (Phase 4.3)
 - ⏳ Screen effects (Phase 4.5)
 
 **Key Files:**
@@ -260,13 +261,26 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 - ✅ Complete gameplay - playable through full levels
 - ✅ Performance: ~60 FPS, efficient geometry sharing
 
-**Phase 4 (Current):** Polish & Remaining Features
-- Audio system (SDL_mixer)
-- Settings persistence
-- Energy UI display
-- Screen effects and transitions
-- Game state testing
-- Bug fixes
+**Phase 4 (Current):** Game Integration - Audio & UI Implemented
+- ✅ Phase 4.1: Audio system (SDL_mixer with Amiga sounds/music)
+- ⏳ Phase 4.2: Settings persistence (INI files)
+- ⏳ Phase 4.3: Game state & progression testing
+- ✅ Phase 4.4: Energy UI display (orthographic projection, icons top-left)
+- ⏳ Phase 4.5: Screen effects & transitions
+- ⏳ Phase 4.6: Bug fixes & testing
+
+**Important Notes for Phase 4.4 (Energy Icons):**
+- Energy icons are **3D models** extracted from Spectrum memory via `Spectrum::IconToModel()`, NOT bitmaps
+- Icons use orthographic projection (set `model.orthographic = true` in `OnAddEnergySymbol()`)
+- Orthographic coordinate system for 1600x900 resolution: `x=[-800,800], y=[-450,450], z=[NEAR_CLIP, FAR_CLIP]`
+- Icon positioning: `x_base=-795, y=420` (top-left corner), `scale=27, spacing=15`
+- `OpenGLRenderer::GetOrthographicMatrix()` uses `NEAR_CLIP` to `FAR_CLIP` depth range (NOT 0.0 to 1.0)
+- `DrawModel()` checks `model.orthographic` flag and uses orthographic projection instead of perspective
+- Icon rendering differs by mode:
+  - **Flat mode**: Static positions set in `OnAddEnergySymbol()` (top-left corner)
+  - **VR mode**: Dynamic positions relative to camera (repositioned each frame)
+- Icons only render during `GameState::Game`, not on title screen
+- symbol_idx values: 0=empty, 1=robot(blue), 2=tree(green), 4=boulder(cyan), 6=gold robot(yellow)
 
 **Future Phases:**
 - Phase 5: Effects & polish (deprecation warnings, post-processing)

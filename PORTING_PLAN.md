@@ -3,7 +3,7 @@
 **Version:** 1.0
 **Target Platform:** macOS (with cross-platform support)
 **Timeline:** 1-2 weeks of focused development
-**Last Updated:** 2025-11-18
+**Last Updated:** 2025-11-22
 
 ---
 
@@ -32,6 +32,79 @@
 **Next:** Phase 2 - Shader Pipeline
 
 See PORTING_TODO.md for detailed completion checklist and learnings.
+
+---
+
+## ✅ Phase 2 Status Update (2025-11-20)
+
+**Phase 2 COMPLETE** - Full 3D rendering pipeline operational! 🎉
+
+- ✅ GLSL shaders converted from HLSL (Sentinel.vert/frag, Effect.vert/frag)
+- ✅ Shader programs compile and link successfully
+- ✅ Uniform buffer objects (UBOs) created and bound correctly
+- ✅ Test triangle renders with correct RGB colors
+- ✅ Camera and projection matrices working
+- ✅ Perspective transformation functional
+- ✅ Matrix transposition issues resolved (row-major → column-major)
+
+**Key Implementation Notes:**
+- GLSL syntax differs from HLSL: `mix()` vs `lerp()`, `clamp()` vs `saturate()`
+- Uniform blocks use std140 layout with explicit padding for 16-byte alignment
+- Column-major matrices in OpenGL (DirectXMath uses row-major, but memory layout compatible)
+- No binding qualifiers in OpenGL 3.3 shaders (set via glUniformBlockBinding)
+- Screenshot tool (`--screenshot` flag) implemented for automated testing
+
+**Next:** Phase 3 - Model Rendering
+
+---
+
+## ✅ Phase 3 Status Update (2025-11-20)
+
+**Phase 3 COMPLETE** - Full game rendering operational! 🎉
+
+- ✅ Model vertex data uploaded to GPU (VBO/IBO)
+- ✅ DrawModel() implemented with model caching system
+- ✅ Landscape, trees, boulders, robots render correctly
+- ✅ Game logic re-enabled and fully functional
+- ✅ Camera movement, object selection working
+- ✅ All 3D models render with proper lighting and colors
+
+**Key Implementation Notes:**
+- Model caching uses `m_modelVBOs` map with vertex/index pointers as keys
+- UploadModel() creates separate VBO/IBO for each unique model
+- DrawModel() binds VBO/IBO, updates uniforms, and issues glDrawElements call
+- Game updates re-enabled after shader pipeline verification
+- Full gameplay tested and working
+
+**Next:** Phase 4 - Game Integration
+
+---
+
+## ✅ Phase 4 Status Update (2025-11-22)
+
+**Phase 4.1 & 4.4 COMPLETE** - Audio and UI features implemented! ✅
+
+**Phase 4.1: Audio System**
+- ✅ SDL_mixer audio system fully implemented
+- ✅ Amiga sound effects loading (13 WAV files)
+- ✅ Background music playing automatically (amiga_pcm.wav converted from ADPCM to PCM)
+- ✅ Audio initialization, playback, and cleanup working
+
+**Phase 4.4: Energy Display UI**
+- ✅ Orthographic projection support added to OpenGLRenderer
+- ✅ Energy icons (3D models from Spectrum memory) render correctly
+- ✅ Icons positioned in top-left corner (x=-795, y=420) matching PC version
+- ✅ Icon scale (27) and spacing (15) calibrated to PC version
+- ✅ Icons display gold robot, blue robot, boulder, tree based on player energy
+
+**Key Implementation Notes:**
+- Energy icons are 3D models extracted from Spectrum memory, not bitmaps
+- Orthographic projection uses same depth range as perspective (NEAR_CLIP to FAR_CLIP)
+- Icons render with `model.orthographic` flag set to true
+- Flat mode keeps static icon positions from OnAddEnergySymbol()
+- VR mode repositions icons dynamically relative to camera
+
+**Next:** Phase 4.2, 4.3, 4.5 - Settings, game state, screen effects
 
 ---
 
