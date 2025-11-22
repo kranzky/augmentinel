@@ -59,7 +59,10 @@ bool View::InputAction(Action action)
         if (key_state == KeyState::Down)
         {
             if (action == Action::TurnLeft || action == Action::TurnRight ||
-                action == Action::LookUp || action == Action::LookDown)
+                action == Action::LookUp || action == Action::LookDown ||
+                action == Action::Hyperspace || action == Action::U_Turn ||
+                action == Action::Transfer || action == Action::Robot ||
+                action == Action::Boulder || action == Action::Tree)
             {
                 return true;
             }

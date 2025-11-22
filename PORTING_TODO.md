@@ -797,7 +797,9 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 **Status:** ✅ COMPLETE
 **Prerequisites:** Phase 3 complete ✅
 
-### 4.1: Audio System (SDL_mixer) ✅
+### 4.1: Audio System (SDL_mixer) ✅ + Enhancements 🔄
+
+**Initial Implementation (Complete ✅):**
 - [x] Initialize SDL_mixer ✅
   - [x] Add SDL_mixer to CMakeLists.txt dependencies ✅
   - [x] Initialize audio subsystem on startup ✅
@@ -812,9 +814,176 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
   - [x] Implement PlayMusic() with looping ✅
   - [x] Music volume controls ✅
   - [x] Test music playback during gameplay ✅
-- [x] Spatial audio (deferred to Phase 5 - optional enhancement)
 
-**Result:** Audio system fully implemented with SDL_mixer. All Amiga sound effects load and play correctly during gameplay. Music system implemented but current amiga.wav uses Microsoft ADPCM format which is not supported by SDL_mixer - consider converting to PCM format with: `ffmpeg -i amiga.wav -acodec pcm_s16le amiga_pcm.wav`
+**Current Issues Identified:**
+1. Music stops when tunes play (both use same playback system)
+2. Looping effects (seen.wav) don't loop - Play() always uses loops=0
+3. Sound effects interrupt looping effects - no channel management
+4. Sound pack selection fixed at startup - can't switch during gameplay
+5. Using WAV files for music instead of MP3
+
+**Enhancement Plan (Phase 4.1 Extended):**
+
+#### 4.1.1: Channel Management System
+**Problem:** All sounds compete for the same channels, causing interruptions
+
+**Solution:** Explicit channel allocation by audio type
+- [ ] Define channel allocation constants in Audio.h
+  ```cpp
+  static constexpr int LOOPING_EFFECT_CHANNEL = 0;     // seen.wav, etc.
+  static constexpr int FIRST_TUNE_CHANNEL = 1;         // Tunes (jingles)
+  static constexpr int LAST_TUNE_CHANNEL = 4;          // 4 channels for tunes
+  static constexpr int FIRST_EFFECT_CHANNEL = 5;       // One-shot effects
+  static constexpr int LAST_EFFECT_CHANNEL = 15;       // 11 channels for effects
+  ```
+- [ ] Reserve channel 0 exclusively for looping effects (Mix_ReserveChannels(1))
+- [ ] Implement GetChannelForType(AudioType) helper method
+  - Returns LOOPING_EFFECT_CHANNEL for AudioType::LoopingEffect
+  - Returns first free channel in 1-4 range for AudioType::Tune
+  - Returns -1 (any free 5-15) for AudioType::Effect
+  - N/A for AudioType::Music (uses Mix_Music* separate channel)
+
+#### 4.1.2: Fix AudioType Handling in Play()
+**Problem:** Play() ignores AudioType parameter, always plays with loops=0
+
+**Solution:** Implement proper type-based playback
+- [ ] Update Play(filename, AudioType type) to handle each type:
+  ```cpp
+  switch (type) {
+      case AudioType::Music:
+          // Use PlayMusic() instead - background music
+          // Should NOT be called via Play() - log warning
+          break;
+      case AudioType::Tune:
+          // Short jingles (absorb, create, transfer, etc.)
+          // Play on channels 1-4, loops=0 (one-shot)
+          // Use Mix_PlayChannel(GetChannelForType(type), chunk, 0)
+          break;
+      case AudioType::LoopingEffect:
+          // Continuous sounds (seen.wav when being observed)
+          // Play on channel 0, loops=-1 (infinite)
+          // Use Mix_PlayChannel(LOOPING_EFFECT_CHANNEL, chunk, -1)
+          break;
+      case AudioType::Effect:
+          // One-shot sounds (footsteps, etc.)
+          // Play on channels 5-15, loops=0
+          // Use Mix_PlayChannel(-1, chunk, 0) // any free channel >= 5
+          break;
+  }
+  ```
+- [ ] Update Stop(AudioType type) to halt appropriate channels:
+  - Music: Mix_HaltMusic()
+  - Tune: Mix_HaltGroup(TUNE_GROUP) // group channels 1-4
+  - LoopingEffect: Mix_HaltChannel(0)
+  - Effect: Don't halt (let one-shots finish naturally)
+  - Stop(): Halt everything (Mix_HaltMusic() + Mix_HaltChannel(-1))
+
+#### 4.1.3: Sound Pack Switching
+**Problem:** Sound pack directory set at initialization only
+
+**Solution:** Runtime sound pack switching with hot-reload
+- [ ] Add SoundPack enum to Audio.h
+  ```cpp
+  enum class SoundPack {
+      Amiga = 0,      // Default
+      C64 = 1,
+      BBC = 2,
+      Spectrum = 3
+  };
+  ```
+- [ ] Add sound pack management to Audio class:
+  ```cpp
+  SoundPack m_currentPack{SoundPack::Amiga};
+
+  void SetSoundPack(SoundPack pack);
+  SoundPack GetSoundPack() const { return m_currentPack; }
+  const char* GetSoundPackName(SoundPack pack) const;
+  ```
+- [ ] Implement SetSoundPack():
+  - Update m_soundsDir based on pack:
+    - Amiga: "sounds/Commodore Amiga"
+    - C64: "sounds/Commodore 64"
+    - BBC: "sounds/BBC Micro"
+    - Spectrum: "sounds/Sinclair ZX Spectrum"
+  - Clear m_sounds cache (unload all cached chunks)
+  - Free all Mix_Chunk* with Mix_FreeChunk()
+  - m_sounds.clear()
+  - Don't reload - sounds will lazy-load on next Play()
+- [ ] Add key bindings in Application.cpp:
+  - Key 1: Switch to Amiga sound pack
+  - Key 2: Switch to C64 sound pack
+  - Key 3: Switch to BBC sound pack
+  - Key 4: Switch to Spectrum sound pack
+- [ ] Handle key presses:
+  ```cpp
+  case SDLK_1: if (m_pAudio) m_pAudio->SetSoundPack(SoundPack::Amiga); break;
+  case SDLK_2: if (m_pAudio) m_pAudio->SetSoundPack(SoundPack::C64); break;
+  case SDLK_3: if (m_pAudio) m_pAudio->SetSoundPack(SoundPack::BBC); break;
+  case SDLK_4: if (m_pAudio) m_pAudio->SetSoundPack(SoundPack::Spectrum); break;
+  ```
+- [ ] Optional: Display notification when switching packs (SDL_Log or on-screen)
+
+#### 4.1.4: Switch to MP3 Music
+**Problem:** Using WAV files for music (large file size)
+
+**Solution:** Use compressed MP3 format
+- [ ] Verify MP3 support in Audio::Audio():
+  - MIX_INIT_MP3 already in Mix_Init() flags ✅
+- [ ] Update background music file path:
+  - Change from: `sounds/music/amiga_pcm.wav`
+  - Change to: `sounds/music/amiga.mp3`
+- [ ] Test MP3 playback:
+  - Verify amiga.mp3 exists in sounds/music/
+  - Verify it loads and plays correctly
+  - Verify looping works
+- [ ] Delete obsolete files:
+  - Remove sounds/music/amiga.wav (ADPCM format, unsupported)
+  - Remove sounds/music/amiga_pcm.wav (large PCM format)
+  - Keep only sounds/music/amiga.mp3 (compressed, efficient)
+- [ ] Update PORTING_TODO.md to remove WAV conversion note
+
+#### 4.1.5: Testing & Verification
+- [ ] Test music continuity:
+  - Start game, verify music plays
+  - Play a tune (absorb object)
+  - Verify music continues during and after tune
+  - Verify music loops seamlessly
+- [ ] Test looping effects:
+  - Trigger seen.wav (being observed by sentinel)
+  - Verify it loops continuously
+  - Play other sound effects
+  - Verify looping effect continues (not interrupted)
+  - Stop condition removes looping effect
+- [ ] Test tune playback:
+  - Play multiple tunes in quick succession
+  - Verify tunes don't interrupt music
+  - Verify tunes play completely (not cut off)
+- [ ] Test sound pack switching:
+  - Start with Amiga sounds
+  - Press 2, verify C64 sounds play
+  - Press 3, verify BBC sounds play
+  - Press 4, verify Spectrum sounds play
+  - Press 1, verify back to Amiga sounds
+  - Verify cached sounds reload correctly
+- [ ] Test channel limits:
+  - Play many effects simultaneously
+  - Verify no audio glitches or crashes
+  - Verify oldest effects dropped if all channels busy
+
+**Implementation Priority:**
+1. Channel management (4.1.1) - Foundation for everything
+2. AudioType handling (4.1.2) - Fixes music/tune conflicts
+3. MP3 music (4.1.4) - Simple file swap
+4. Sound pack switching (4.1.3) - User-facing feature
+5. Testing (4.1.5) - Verification
+
+**Expected Outcome:**
+- ✅ Background music plays continuously, never interrupted
+- ✅ Looping effects (seen.wav) loop properly, not interrupted by other sounds
+- ✅ Tunes (jingles) play without stopping music
+- ✅ Sound pack switching works seamlessly with keys 1-4
+- ✅ Smaller music file size with MP3 format
+- ✅ Professional audio mixing with proper channel management
 
 ### 4.2: Settings System
 - [ ] Implement settings persistence
