@@ -46,7 +46,11 @@ cmake --build .
 - ✅ Full game loop with input system (keyboard + mouse)
 - ✅ Object creation and absorption working
 - ✅ Complete gameplay - playable through full levels
-- ✅ Audio system (Phase 4.1) - SDL_mixer with Amiga sounds/music
+- ✅ Audio system (Phase 4.1) - Professional multi-channel audio with sound pack switching
+  - Channel management: Looping effects (ch 0), Tunes (ch 1-4), Effects (ch 5-15)
+  - Music never interrupted by tunes or effects
+  - Hot-swappable sound packs: Keys 1-4 switch between Amiga/C64/BBC/Spectrum
+  - MP3 music (3.6MB vs 51MB WAV - 93% reduction)
 - ✅ Energy UI display (Phase 4.4) - Orthographic projection, icons dynamically positioned
 - ✅ Screen effects (Phase 4.5) - Framebuffer-based post-processing (fade, dissolve, desaturate)
 - ✅ Bug fixes (Phase 4.6) - Landscape navigation, icon positioning, key repeat behavior
@@ -263,7 +267,12 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 - ✅ Performance: ~60 FPS, efficient geometry sharing
 
 **Phase 4 (Complete ✅):** Game Integration - Audio, UI & Effects Complete
-- ✅ Phase 4.1: Audio system (SDL_mixer with Amiga sounds/music)
+- ✅ Phase 4.1: Professional audio system (extended implementation)
+  - Multi-channel management: Looping effects, tunes, sound effects isolated
+  - Music continuous playback (never interrupted by tunes/effects)
+  - Sound pack switching: Keys 1-4 for Amiga/C64/BBC/Spectrum with hot-reload
+  - MP3 music format (93% disk space savings)
+  - Music starts at landscape select (not on startup)
 - ✅ Phase 4.4: Energy UI display (orthographic projection, dynamic positioning)
 - ✅ Phase 4.5: Screen effects & transitions (framebuffer post-processing)
 - ✅ Phase 4.6: Bug fixes (landscape navigation, icon positioning, key repeat)

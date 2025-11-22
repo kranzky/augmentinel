@@ -130,10 +130,10 @@ Augmentinel::Augmentinel(std::shared_ptr<View> &pView, std::shared_ptr<Audio> &p
 	auto music_path = fs::path(SOUND_PACK_DIR) / MUSIC_SUBDIR;
 	for (auto &p : fs::directory_iterator(music_path))
 	{
-		if (p.path().extension() == ".wav")
+		if (p.path().extension() == ".mp3")
 		{
-			pAudio->LoadWAV(p.path());
-			music_files.push_back(p.path().filename().wstring());
+			// Music files use PlayMusic() not LoadWAV(), so just collect full paths
+			music_files.push_back(p.path().wstring());
 		}
 	}
 
@@ -211,7 +211,8 @@ void Augmentinel::PlayMusic()
 	// Note: Tunes no longer interrupt music due to channel management
 	auto playing = m_music_enabled && m_music_playing;
 
-	if (!m_pAudio->SetMusicPlaying(playing))
+	// Only try to start music if we want it playing
+	if (playing && !m_pAudio->SetMusicPlaying(playing))
 	{
 		if (it_music != music_files.end())
 			it_music++;
@@ -229,6 +230,11 @@ void Augmentinel::PlayMusic()
 		{
 			it_music = music_files.erase(it_music);
 		}
+	}
+	else if (!playing)
+	{
+		// Stop music if we don't want it playing
+		m_pAudio->SetMusicPlaying(false);
 	}
 }
 

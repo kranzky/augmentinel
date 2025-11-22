@@ -36,17 +36,8 @@ Audio::Audio() {
     m_soundsDir = "sounds/Commodore Amiga";
     m_musicDir = "sounds/music";
 
-    // Load and play background music automatically
-    // Using MP3 format (compressed, efficient)
-    fs::path musicPath = m_musicDir / "amiga.mp3";
-    if (fs::exists(musicPath)) {
-        PlayMusic(musicPath, true);  // Loop music
-        if (!m_musicPlaying) {
-            SDL_Log("WARNING: Music loaded but failed to play");
-        }
-    } else {
-        SDL_Log("WARNING: Music file not found: %s", musicPath.string().c_str());
-    }
+    // Don't start music automatically - let the game control when music starts
+    // Music will begin when entering landscape select screen
 }
 
 Audio::~Audio() {
