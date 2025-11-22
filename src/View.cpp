@@ -45,21 +45,40 @@ bool View::InputAction(Action action)
         return false;
     }
 
-    // Check if any of the bound keys are down, just pressed, or just released
-    // UpEdge detection allows quick taps to be registered even if down/up occur in same frame
+    // Check if any of the bound keys are just pressed or just released
+    // Only check edge states (DownEdge) for one-shot actions
+    // For continuous movement actions, also check Down state
     for (int key : it->second)
     {
         auto key_state = GetKeyState(key);
-        if (key_state == KeyState::Down || key_state == KeyState::DownEdge || key_state == KeyState::UpEdge)
+        if (key_state == KeyState::DownEdge)
         {
             return true;
         }
+
+        // Also check Down state for continuous movement actions
+        if (key_state == KeyState::Down)
+        {
+            if (action == Action::TurnLeft || action == Action::TurnRight ||
+                action == Action::LookUp || action == Action::LookDown)
+            {
+                return true;
+            }
+        }
     }
 
-    // Special handling for VK_ANY - any key pressed
+    // Special handling for VK_ANY - any key pressed (excluding ESC)
     if (std::find(it->second.begin(), it->second.end(), VK_ANY) != it->second.end())
     {
-        return AnyKeyPressed();
+        // Check if any key is pressed, but exclude ESC
+        for (const auto &pair : m_keys)
+        {
+            if (pair.first != VK_ESCAPE &&
+                (pair.second == KeyState::Down || pair.second == KeyState::DownEdge))
+            {
+                return true;
+            }
+        }
     }
 
     return false;

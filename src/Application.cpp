@@ -329,6 +329,14 @@ void Application::ProcessEvent(const SDL_Event &event)
 
 void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
 {
+    // Ignore key repeat events - we only want the initial press
+    // Key state will remain "Down" until released, which is what we want for movement
+    // Action keys (ESC, TAB) check for DownEdge and will only trigger once
+    if (key.repeat)
+    {
+        return;
+    }
+
     // Special case: TAB to toggle debug info
     if (key.keysym.sym == SDLK_TAB && pressed)
     {
