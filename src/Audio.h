@@ -13,6 +13,13 @@ enum class AudioType {
 // Audio class using SDL2_mixer
 class Audio {
 public:
+    // Channel allocation constants
+    static constexpr int LOOPING_EFFECT_CHANNEL = 0;     // Reserved for looping effects (seen.wav)
+    static constexpr int FIRST_TUNE_CHANNEL = 1;         // First channel for tunes
+    static constexpr int LAST_TUNE_CHANNEL = 4;          // Last channel for tunes (4 channels)
+    static constexpr int FIRST_EFFECT_CHANNEL = 5;       // First channel for effects
+    static constexpr int LAST_EFFECT_CHANNEL = 15;       // Last channel for effects (11 channels)
+public:
     Audio();
     ~Audio();
 
@@ -55,4 +62,5 @@ private:
     // Helper methods
     fs::path GetSoundPath(const std::wstring& filename);
     Mix_Chunk* LoadSound(const std::wstring& filename);
+    int GetChannelForType(AudioType type) const;
 };

@@ -27,24 +27,22 @@ Audio::Audio() {
     // Allocate mixing channels
     Mix_AllocateChannels(16);
 
+    // Reserve channel 0 for looping effects (protects it from being used by other sounds)
+    Mix_ReserveChannels(1);
+
     m_initialized = true;
 
     // Set default sound directories (Amiga sounds by default)
     m_soundsDir = "sounds/Commodore Amiga";
     m_musicDir = "sounds/music";
 
-    SDL_Log("Audio system initialized successfully");
-    SDL_Log("  Sound effects: %s", m_soundsDir.string().c_str());
-    SDL_Log("  Music: %s", m_musicDir.string().c_str());
-
     // Load and play background music automatically
-    // Using PCM format for compatibility with SDL_mixer
-    fs::path musicPath = m_musicDir / "amiga_pcm.wav";
+    // Using MP3 format (compressed, efficient)
+    fs::path musicPath = m_musicDir / "amiga.mp3";
     if (fs::exists(musicPath)) {
         PlayMusic(musicPath, true);  // Loop music
         if (!m_musicPlaying) {
-            SDL_Log("WARNING: Music loaded but failed to play (possibly unsupported format)");
-            SDL_Log("WARNING: Consider converting to PCM format: ffmpeg -i input.wav -acodec pcm_s16le output.wav");
+            SDL_Log("WARNING: Music loaded but failed to play");
         }
     } else {
         SDL_Log("WARNING: Music file not found: %s", musicPath.string().c_str());
@@ -132,21 +130,52 @@ Mix_Chunk* Audio::LoadSound(const std::wstring& filename) {
 bool Audio::Play(const std::wstring& filename, AudioType type) {
     if (!m_initialized) return false;
 
+    // Handle Music type - should use PlayMusic() instead
+    if (type == AudioType::Music) {
+        SDL_Log("WARNING: AudioType::Music should use PlayMusic(), not Play()");
+        return false;
+    }
+
     Mix_Chunk* chunk = LoadSound(filename);
     if (!chunk) {
         return false;
     }
 
-    // Play on first available channel, 0 loops (play once)
-    int channel = Mix_PlayChannel(-1, chunk, 0);
-    if (channel < 0) {
+    // Get appropriate channel and loop count for this audio type
+    int channel;
+    int loops;
+
+    switch (type) {
+        case AudioType::Tune:
+            // Tunes: Play on dedicated tune channels (1-4), no loop
+            channel = GetChannelForType(type);
+            loops = 0;  // Play once
+            break;
+
+        case AudioType::LoopingEffect:
+            // Looping effects: Play on channel 0, infinite loop
+            channel = LOOPING_EFFECT_CHANNEL;
+            loops = -1;  // Loop forever
+            break;
+
+        case AudioType::Effect:
+        default:
+            // Effects: Play on any free channel (5-15), no loop
+            channel = -1;  // Let SDL pick any free channel >= 5
+            loops = 0;     // Play once
+            break;
+    }
+
+    // Play the sound
+    int playingChannel = Mix_PlayChannel(channel, chunk, loops);
+    if (playingChannel < 0) {
         SDL_Log("ERROR: Failed to play sound '%s': %s",
                 to_string(filename).c_str(), Mix_GetError());
         return false;
     }
 
-    // Set volume based on type
-    Mix_Volume(channel, static_cast<int>(m_soundVolume * MIX_MAX_VOLUME));
+    // Set volume
+    Mix_Volume(playingChannel, static_cast<int>(m_soundVolume * MIX_MAX_VOLUME));
 
     return true;
 }
@@ -239,6 +268,35 @@ void Audio::PositionListener(XMFLOAT3 pos, XMFLOAT3 dir, XMFLOAT3 up) {
     // For now, just a stub
 }
 
+int Audio::GetChannelForType(AudioType type) const {
+    switch (type) {
+        case AudioType::Music:
+            // Music uses Mix_Music*, not a channel
+            return -1;
+
+        case AudioType::Tune:
+            // Find first free channel in tune range (1-4)
+            for (int ch = FIRST_TUNE_CHANNEL; ch <= LAST_TUNE_CHANNEL; ++ch) {
+                if (!Mix_Playing(ch)) {
+                    return ch;
+                }
+            }
+            // All tune channels busy, use first tune channel (will interrupt oldest)
+            return FIRST_TUNE_CHANNEL;
+
+        case AudioType::LoopingEffect:
+            // Always use dedicated looping effect channel
+            return LOOPING_EFFECT_CHANNEL;
+
+        case AudioType::Effect:
+            // Use any free channel in effect range (5-15), or let SDL pick
+            return -1;  // -1 means "any free channel >= FIRST_EFFECT_CHANNEL"
+
+        default:
+            return -1;
+    }
+}
+
 bool Audio::IsPlaying(AudioType type) const {
     if (!m_initialized) return false;
 
@@ -253,12 +311,32 @@ bool Audio::IsPlaying(AudioType type) const {
 void Audio::Stop(AudioType type) {
     if (!m_initialized) return;
 
-    if (type == AudioType::Music || type == AudioType::Tune) {
-        Mix_HaltMusic();
-        m_musicPlaying = false;
-    } else {
-        // Stop all sound effects
-        Mix_HaltChannel(-1);
+    switch (type) {
+        case AudioType::Music:
+            // Stop music (Mix_Music*)
+            Mix_HaltMusic();
+            m_musicPlaying = false;
+            break;
+
+        case AudioType::Tune:
+            // Stop all tune channels (1-4)
+            for (int ch = FIRST_TUNE_CHANNEL; ch <= LAST_TUNE_CHANNEL; ++ch) {
+                Mix_HaltChannel(ch);
+            }
+            break;
+
+        case AudioType::LoopingEffect:
+            // Stop looping effect channel (0)
+            Mix_HaltChannel(LOOPING_EFFECT_CHANNEL);
+            break;
+
+        case AudioType::Effect:
+            // Don't stop one-shot effects - let them finish naturally
+            // If we really need to stop them:
+            // for (int ch = FIRST_EFFECT_CHANNEL; ch <= LAST_EFFECT_CHANNEL; ++ch) {
+            //     Mix_HaltChannel(ch);
+            // }
+            break;
     }
 }
 

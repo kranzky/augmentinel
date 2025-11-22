@@ -207,9 +207,9 @@ void Augmentinel::PlayMusic()
 		SetSetting(MUSIC_VOLUME_KEY, m_music_volume);
 	}
 
-	// Music plays if enabled, in a playing state, and when no tune is playing.
-	auto playing = m_music_enabled && m_music_playing &&
-								 !m_pAudio->IsPlaying(AudioType::Tune);
+	// Music plays if enabled and in a playing state
+	// Note: Tunes no longer interrupt music due to channel management
+	auto playing = m_music_enabled && m_music_playing;
 
 	if (!m_pAudio->SetMusicPlaying(playing))
 	{
@@ -219,10 +219,16 @@ void Augmentinel::PlayMusic()
 		if (it_music == music_files.end())
 			it_music = music_files.begin();
 
-		if (m_pAudio->Play(*it_music, AudioType::Music))
+		// Use PlayMusic() instead of Play() - music uses Mix_Music*, not Mix_Chunk*
+		if (it_music != music_files.end())
+		{
+			m_pAudio->PlayMusic(*it_music, true);  // Loop music
 			m_pAudio->SetMusicVolume(m_music_volume / 100.0f);
+		}
 		else
+		{
 			it_music = music_files.erase(it_music);
+		}
 	}
 }
 
