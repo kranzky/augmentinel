@@ -338,6 +338,26 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
         return;
     }
 
+    // Special case: Number keys 1-4 to switch sound packs
+    if (pressed && m_pAudio)
+    {
+        switch (key.keysym.sym)
+        {
+            case SDLK_1:
+                m_pAudio->SetSoundPack(SoundPack::Amiga);
+                return;
+            case SDLK_2:
+                m_pAudio->SetSoundPack(SoundPack::C64);
+                return;
+            case SDLK_3:
+                m_pAudio->SetSoundPack(SoundPack::BBC);
+                return;
+            case SDLK_4:
+                m_pAudio->SetSoundPack(SoundPack::Spectrum);
+                return;
+        }
+    }
+
     // Pass key events to renderer for game input (including ESC)
     if (m_pRenderer)
     {

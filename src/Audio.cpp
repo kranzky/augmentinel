@@ -347,3 +347,40 @@ void Audio::Stop() {
     Mix_HaltChannel(-1);
     m_musicPlaying = false;
 }
+
+const char* Audio::GetSoundPackName(SoundPack pack) const {
+    switch (pack) {
+        case SoundPack::Amiga:    return "Commodore Amiga";
+        case SoundPack::C64:      return "Commodore 64";
+        case SoundPack::BBC:      return "BBC Micro";
+        case SoundPack::Spectrum: return "Sinclair ZX Spectrum";
+        default:                  return "Unknown";
+    }
+}
+
+void Audio::SetSoundPack(SoundPack pack) {
+    if (!m_initialized) return;
+
+    // Don't reload if already using this pack
+    if (pack == m_currentPack) {
+        return;
+    }
+
+    // Update current pack
+    m_currentPack = pack;
+
+    // Update sounds directory based on pack
+    m_soundsDir = std::string("sounds/") + GetSoundPackName(pack);
+
+    // Clear all cached sounds
+    for (auto& [name, chunk] : m_sounds) {
+        if (chunk) {
+            Mix_FreeChunk(chunk);
+        }
+    }
+    m_sounds.clear();
+
+    SDL_Log("Sound pack changed to: %s", GetSoundPackName(pack));
+
+    // Sounds will be lazy-loaded on next Play() call
+}

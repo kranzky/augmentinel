@@ -10,6 +10,13 @@ enum class AudioType {
     Effect
 };
 
+enum class SoundPack {
+    Amiga = 0,      // Commodore Amiga (default)
+    C64 = 1,        // Commodore 64
+    BBC = 2,        // BBC Micro
+    Spectrum = 3    // Sinclair ZX Spectrum
+};
+
 // Audio class using SDL2_mixer
 class Audio {
 public:
@@ -43,6 +50,11 @@ public:
     void Stop(AudioType type);
     void Stop();
 
+    // Sound pack management
+    void SetSoundPack(SoundPack pack);
+    SoundPack GetSoundPack() const { return m_currentPack; }
+    const char* GetSoundPackName(SoundPack pack) const;
+
 private:
     bool m_initialized{false};
 
@@ -58,6 +70,7 @@ private:
     // Sound directory paths
     fs::path m_soundsDir;
     fs::path m_musicDir;
+    SoundPack m_currentPack{SoundPack::Amiga};
 
     // Helper methods
     fs::path GetSoundPath(const std::wstring& filename);
