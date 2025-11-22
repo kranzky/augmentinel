@@ -36,6 +36,9 @@ public:
     uint32_t GetModelCount() const { return m_modelVBOs.size(); }
     void ResetStats() { m_drawCallCount = 0; }
 
+    // Model cache management
+    void ClearModelCache();
+
 private:
     // Shader loading helpers
     std::string LoadShaderFile(const std::string& filename);
@@ -48,6 +51,9 @@ private:
 
     // Model upload helper
     void UploadModel(const Model& model);
+
+    // Cache key computation helper
+    const void* ComputeCacheKey(const Model& model);
 
     // Framebuffer management (Phase 4.5)
     void InitFramebuffers();

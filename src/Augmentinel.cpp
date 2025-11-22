@@ -1325,6 +1325,14 @@ void Augmentinel::ChangeState(GameState new_state)
 {
 	m_state = new_state;
 	m_substate = 0;
+
+	// Clear model cache when changing states to prevent stale geometry
+	// from being reused when memory addresses are recycled
+	auto renderer = std::dynamic_pointer_cast<OpenGLRenderer>(m_pView);
+	if (renderer)
+	{
+		renderer->ClearModelCache();
+	}
 }
 
 bool Augmentinel::RunUntilStateChange()

@@ -1,5 +1,6 @@
 #include "Platform.h"
 #include "OpenGLRenderer.h"
+#include <functional>
 
 OpenGLRenderer::OpenGLRenderer(int width, int height)
     : m_width(width), m_height(height) {
@@ -307,8 +308,8 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
         return;
     }
 
-    // Upload if not already uploaded (using vertex buffer pointer as cache key)
-    const void* cacheKey = model.m_pVertices.get();
+    // Upload if not already uploaded (using hash-based cache key)
+    const void* cacheKey = ComputeCacheKey(model);
     if (!m_modelVBOs.count(cacheKey)) {
         UploadModel(model);
     }
@@ -341,7 +342,7 @@ void OpenGLRenderer::DrawModel(Model& model, const Model& linkedModel) {
     UpdateVertexConstants();
     UpdatePixelConstants();
 
-    // Bind buffers (using vertex buffer pointer as cache key)
+    // Bind buffers (using hash-based cache key)
     glBindBuffer(GL_ARRAY_BUFFER, m_modelVBOs.at(cacheKey));
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_modelIBOs.at(cacheKey));
 
@@ -551,19 +552,32 @@ void OpenGLRenderer::UpdatePixelConstants() {
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
+const void* OpenGLRenderer::ComputeCacheKey(const Model& model) {
+    // Compute hash of geometry data to use as cache key (more reliable than memory address)
+    // Combine vertex buffer address, index buffer address, and sizes - unique per geometry instance
+    auto& vertices = *model.m_pVertices;
+    auto& indices = *model.m_pIndices;
+
+    size_t hash1 = std::hash<const void*>{}(vertices.data());
+    size_t hash2 = std::hash<const void*>{}(indices.data());
+    size_t hash3 = vertices.size();
+    size_t hash4 = indices.size();
+
+    return reinterpret_cast<const void*>(hash1 ^ (hash2 << 1) ^ (hash3 << 2) ^ (hash4 << 3));
+}
+
 void OpenGLRenderer::UploadModel(const Model& model) {
-    // Use vertex buffer pointer as cache key (identifies unique geometry)
-    const void* cacheKey = model.m_pVertices.get();
-
-    // Check if already uploaded
-    if (m_modelVBOs.count(cacheKey)) {
-        // Already uploaded, skip
-        return;
-    }
-
     // Get vertex and index data from model
     auto& vertices = *model.m_pVertices;
     auto& indices = *model.m_pIndices;
+
+    // Compute cache key using helper method
+    const void* cacheKey = ComputeCacheKey(model);
+
+    // Check if already uploaded
+    if (m_modelVBOs.count(cacheKey)) {
+        return; // Already uploaded, reuse
+    }
 
     // Create VBO
     GLuint vbo;
@@ -596,6 +610,27 @@ void OpenGLRenderer::UploadModel(const Model& model) {
 void OpenGLRenderer::SetVerticalFOV(float fov) {
     m_verticalFOV = fov;
     SDL_Log("SetVerticalFOV: %.2f degrees", fov);
+}
+
+void OpenGLRenderer::ClearModelCache() {
+    size_t count = m_modelVBOs.size();
+
+    // Delete all VBOs
+    for (auto& pair : m_modelVBOs) {
+        glDeleteBuffers(1, &pair.second);
+    }
+    m_modelVBOs.clear();
+
+    // Delete all IBOs
+    for (auto& pair : m_modelIBOs) {
+        glDeleteBuffers(1, &pair.second);
+    }
+    m_modelIBOs.clear();
+
+    // Clear index counts
+    m_modelIndexCounts.clear();
+
+    SDL_Log("Model cache cleared: %zu models freed", count);
 }
 
 // Framebuffer management (Phase 4.5)
