@@ -33,7 +33,6 @@ void View::SetMouseSpeed(int percent)
 
 void View::EnableFreeLook(bool enable)
 {
-    SDL_Log("Free look %s", enable ? "enabled" : "disabled");
     m_freelook = enable;
 }
 

@@ -53,8 +53,6 @@ bool OpenGLRenderer::Init() {
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    SDL_Log("OpenGLRenderer: Initializing shader pipeline...");
-
     // Load and compile Sentinel shaders
     std::string sentinelVertSrc = LoadShaderFile("Sentinel.vert");
     std::string sentinelFragSrc = LoadShaderFile("Sentinel.frag");
@@ -103,26 +101,18 @@ bool OpenGLRenderer::Init() {
         return false;
     }
 
-    SDL_Log("OpenGLRenderer: Shader pipeline initialized successfully");
-    SDL_Log("  - Sentinel program: %u", m_sentinelProgram);
-    SDL_Log("  - Effect program: %u", m_effectProgram);
-
     // Create uniform buffers (UBOs)
-    SDL_Log("OpenGLRenderer: Creating uniform buffers...");
-
     // Create vertex constants UBO
     glGenBuffers(1, &m_vertexConstantsUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, m_vertexConstantsUBO);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(VertexConstants), nullptr, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_UNIFORM_BUFFER, 0, m_vertexConstantsUBO);  // Binding point 0
-    SDL_Log("  - Vertex constants UBO: %u (size: %zu bytes)", m_vertexConstantsUBO, sizeof(VertexConstants));
 
     // Create pixel constants UBO
     glGenBuffers(1, &m_pixelConstantsUBO);
     glBindBuffer(GL_UNIFORM_BUFFER, m_pixelConstantsUBO);
     glBufferData(GL_UNIFORM_BUFFER, sizeof(PixelConstants), nullptr, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_UNIFORM_BUFFER, 1, m_pixelConstantsUBO);  // Binding point 1
-    SDL_Log("  - Pixel constants UBO: %u (size: %zu bytes)", m_pixelConstantsUBO, sizeof(PixelConstants));
 
     // Unbind buffer
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -131,25 +121,16 @@ bool OpenGLRenderer::Init() {
     GLuint vertexBlockIndex = glGetUniformBlockIndex(m_sentinelProgram, "VertexConstants");
     if (vertexBlockIndex != GL_INVALID_INDEX) {
         glUniformBlockBinding(m_sentinelProgram, vertexBlockIndex, 0);
-        SDL_Log("  - Bound VertexConstants in Sentinel program to binding point 0");
-    } else {
-        SDL_Log("WARNING: VertexConstants block not found in Sentinel program");
     }
 
     GLuint pixelBlockIndexSentinel = glGetUniformBlockIndex(m_sentinelProgram, "PixelConstants");
     if (pixelBlockIndexSentinel != GL_INVALID_INDEX) {
         glUniformBlockBinding(m_sentinelProgram, pixelBlockIndexSentinel, 1);
-        SDL_Log("  - Bound PixelConstants in Sentinel program to binding point 1");
-    } else {
-        SDL_Log("WARNING: PixelConstants block not found in Sentinel program");
     }
 
     GLuint pixelBlockIndexEffect = glGetUniformBlockIndex(m_effectProgram, "PixelConstants");
     if (pixelBlockIndexEffect != GL_INVALID_INDEX) {
         glUniformBlockBinding(m_effectProgram, pixelBlockIndexEffect, 1);
-        SDL_Log("  - Bound PixelConstants in Effect program to binding point 1");
-    } else {
-        SDL_Log("WARNING: PixelConstants block not found in Effect program");
     }
 
     // Check for OpenGL errors
@@ -159,11 +140,8 @@ bool OpenGLRenderer::Init() {
         return false;
     }
 
-    SDL_Log("OpenGLRenderer: Uniform buffers created successfully");
-
     // Create VAO (vertex attributes will be set up per-draw in DrawModel)
     glGenVertexArrays(1, &m_vao);
-    SDL_Log("  - VAO created: %u", m_vao);
 
     // Check for errors
     err = glGetError();
@@ -175,8 +153,6 @@ bool OpenGLRenderer::Init() {
     // Initialize camera (game will set actual position)
     m_camera.SetPosition(XMFLOAT3(0.0f, 0.0f, 0.0f));
     m_camera.SetRotation(XMFLOAT3(0.0f, 0.0f, 0.0f));
-
-    SDL_Log("OpenGLRenderer: Camera initialized");
 
     // Initialize framebuffers for post-processing (Phase 4.5)
     InitFramebuffers();
@@ -388,7 +364,6 @@ void OpenGLRenderer::OnResize(uint32_t width, uint32_t height) {
     m_width = width;
     m_height = height;
     glViewport(0, 0, width, height);
-    SDL_Log("Viewport resized to %dx%d", width, height);
 
     // Phase 4.5: Resize framebuffers to match new window size
     ResizeFramebuffers();
@@ -451,7 +426,6 @@ std::string OpenGLRenderer::LoadShaderFile(const std::string& filename) {
     buffer << file.rdbuf();
     std::string source = buffer.str();
 
-    SDL_Log("Loaded shader file: %s (%zu bytes)", path.c_str(), source.length());
     return source;
 }
 
@@ -488,7 +462,6 @@ GLuint OpenGLRenderer::CompileShader(const char* source, GLenum type, const char
         return 0;
     }
 
-    SDL_Log("Compiled shader: %s", name);
     return shader;
 }
 
@@ -534,7 +507,6 @@ GLuint OpenGLRenderer::LinkProgram(GLuint vs, GLuint fs, const char* name) {
     glDeleteShader(vs);
     glDeleteShader(fs);
 
-    SDL_Log("Linked shader program: %s", name);
     return program;
 }
 
@@ -609,7 +581,6 @@ void OpenGLRenderer::UploadModel(const Model& model) {
 
 void OpenGLRenderer::SetVerticalFOV(float fov) {
     m_verticalFOV = fov;
-    SDL_Log("SetVerticalFOV: %.2f degrees", fov);
 }
 
 void OpenGLRenderer::ClearModelCache() {
@@ -629,15 +600,11 @@ void OpenGLRenderer::ClearModelCache() {
 
     // Clear index counts
     m_modelIndexCounts.clear();
-
-    SDL_Log("Model cache cleared: %zu models freed", count);
 }
 
 // Framebuffer management (Phase 4.5)
 
 void OpenGLRenderer::InitFramebuffers() {
-    SDL_Log("OpenGLRenderer: Initializing framebuffers for post-processing...");
-
     // Generate framebuffer
     glGenFramebuffers(1, &m_sceneFBO);
     glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFBO);

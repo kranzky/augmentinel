@@ -104,7 +104,6 @@ bool Application::Init()
     // Enable relative mouse mode for free look
     SDL_SetRelativeMouseMode(SDL_TRUE);
 
-    SDL_Log("Application initialized successfully");
     return true;
 }
 
@@ -116,11 +115,6 @@ void Application::Run(bool dumpScreenshot)
     // Enable debug info by default when taking screenshots
     m_showDebugInfo = dumpScreenshot;
     m_fpsLastTime = SDL_GetTicks();
-
-    if (m_showDebugInfo)
-    {
-        SDL_Log("Debug info enabled (press TAB to toggle)");
-    }
 
     while (m_running)
     {
@@ -341,7 +335,6 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
     if (key.keysym.sym == SDLK_TAB && pressed)
     {
         m_showDebugInfo = !m_showDebugInfo;
-        SDL_Log("Debug info %s", m_showDebugInfo ? "enabled" : "disabled");
         return;
     }
 

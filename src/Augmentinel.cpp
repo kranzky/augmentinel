@@ -966,23 +966,21 @@ void Augmentinel::Frame(float fElapsed)
 
 	case GameState::ShowKiller:
 	{
-		constexpr auto min_fade = 0.4f;
-
 		switch (m_substate)
 		{
 		case 0: // fade in from black
-			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f - min_fade, fElapsed, 2.0f / min_fade))
+			if (m_pView->TransitionEffect(ViewEffect::Fade, 0.6f, fElapsed, 3.0f))
 				m_substate++;
 			break;
 
 		case 1: // slow fade out to black
-			if (m_pView->TransitionEffect(ViewEffect::Fade, 0.99f, fElapsed, 4.0f / min_fade))
+			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 2.0f))
 				m_substate++;
 			break;
 
 		case 2:
 			// slight pause on black
-			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 1.0f / 0.01f))
+			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 1.0f))
 				m_substate++;
 			break;
 		default:

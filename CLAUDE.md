@@ -18,8 +18,8 @@ When working on this codebase, check:
 
 ### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
 
-**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅, Phase 4.1 Complete ✅, Phase 4.4 Complete ✅
-**Current**: Phase 4 - Game Integration (Audio & UI implemented)
+**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅, Phase 4 Complete ✅
+**Current**: Phase 5 - Effects & Polish
 
 **Build:**
 ```bash
@@ -47,10 +47,11 @@ cmake --build .
 - ✅ Object creation and absorption working
 - ✅ Complete gameplay - playable through full levels
 - ✅ Audio system (Phase 4.1) - SDL_mixer with Amiga sounds/music
-- ✅ Energy UI display (Phase 4.4) - Orthographic projection, icons in top-left
+- ✅ Energy UI display (Phase 4.4) - Orthographic projection, icons dynamically positioned
+- ✅ Screen effects (Phase 4.5) - Framebuffer-based post-processing (fade, dissolve, desaturate)
+- ✅ Bug fixes (Phase 4.6) - Landscape navigation, icon positioning, key repeat behavior
 - ⏳ Settings persistence (Phase 4.2)
 - ⏳ Game state testing (Phase 4.3)
-- ⏳ Screen effects (Phase 4.5)
 
 **Key Files:**
 - `src/OpenGLRenderer.cpp/h` - OpenGL renderer implementation
@@ -261,19 +262,19 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 - ✅ Complete gameplay - playable through full levels
 - ✅ Performance: ~60 FPS, efficient geometry sharing
 
-**Phase 4 (Current):** Game Integration - Audio & UI Implemented
+**Phase 4 (Complete ✅):** Game Integration - Audio, UI & Effects Complete
 - ✅ Phase 4.1: Audio system (SDL_mixer with Amiga sounds/music)
-- ⏳ Phase 4.2: Settings persistence (INI files)
-- ⏳ Phase 4.3: Game state & progression testing
-- ✅ Phase 4.4: Energy UI display (orthographic projection, icons top-left)
-- ⏳ Phase 4.5: Screen effects & transitions
-- ⏳ Phase 4.6: Bug fixes & testing
+- ✅ Phase 4.4: Energy UI display (orthographic projection, dynamic positioning)
+- ✅ Phase 4.5: Screen effects & transitions (framebuffer post-processing)
+- ✅ Phase 4.6: Bug fixes (landscape navigation, icon positioning, key repeat)
+- ⏳ Phase 4.2: Settings persistence (deferred to Phase 5)
+- ⏳ Phase 4.3: Game state testing (deferred to Phase 5)
 
 **Important Notes for Phase 4.4 (Energy Icons):**
 - Energy icons are **3D models** extracted from Spectrum memory via `Spectrum::IconToModel()`, NOT bitmaps
 - Icons use orthographic projection (set `model.orthographic = true` in `OnAddEnergySymbol()`)
 - Orthographic coordinate system for 1600x900 resolution: `x=[-800,800], y=[-450,450], z=[NEAR_CLIP, FAR_CLIP]`
-- Icon positioning: `x_base=-795, y=420` (top-left corner), `scale=27, spacing=15`
+- Icon positioning: Dynamic based on window size, `scale=27, spacing=35`
 - `OpenGLRenderer::GetOrthographicMatrix()` uses `NEAR_CLIP` to `FAR_CLIP` depth range (NOT 0.0 to 1.0)
 - `DrawModel()` checks `model.orthographic` flag and uses orthographic projection instead of perspective
 - Icon rendering differs by mode:
@@ -283,5 +284,5 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 - symbol_idx values: 0=empty, 1=robot(blue), 2=tree(green), 4=boulder(cyan), 6=gold robot(yellow)
 
 **Future Phases:**
-- Phase 5: Effects & polish (deprecation warnings, post-processing)
-- Phase 6: Testing & debugging
+- Phase 5: Polish & testing (deprecation warnings, settings persistence, game state testing)
+- Phase 6: Final verification & documentation

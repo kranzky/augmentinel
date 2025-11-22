@@ -77,7 +77,6 @@ bool DebugOverlay::Init(int windowWidth, int windowHeight) {
     for (const char* path : fontPaths) {
         m_font = TTF_OpenFont(path, 16);  // 16pt font
         if (m_font) {
-            SDL_Log("Loaded debug font: %s", path);
             break;
         }
     }
@@ -155,7 +154,6 @@ bool DebugOverlay::Init(int windowWidth, int windowHeight) {
 
     glBindVertexArray(0);
 
-    SDL_Log("DebugOverlay initialized");
     return true;
 }
 
