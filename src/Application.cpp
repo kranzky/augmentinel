@@ -35,6 +35,10 @@ bool Application::Init()
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
+    // Mouse.
+    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+    SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SCALING, "1");
+
     // MSAA
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);

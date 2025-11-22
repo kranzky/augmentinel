@@ -262,22 +262,15 @@ void View::MouseMove(int x, int y)
         return;
     }
 
+    // SDL relative mouse mode provides raw hardware deltas (mickeys), which are much
+    // larger than the screen-space pixel deltas used by the Windows version.
+    // Scale down to approximate Windows behavior.
+    constexpr float SDL_RAW_DELTA_SCALE = 1000.0f;
+
     // Convert mouse delta to camera rotation
-    // SDL mouse motion is much more sensitive than Win32, so we apply an additional multiplier
     // x = horizontal movement (yaw), y = vertical movement (pitch)
-    constexpr float SDL_MOUSE_SENSITIVITY_MULTIPLIER = 100.0f;
-    float yaw = static_cast<float>(x) / (m_mouse_divider * SDL_MOUSE_SENSITIVITY_MULTIPLIER);
-    float pitch = static_cast<float>(y) / (m_mouse_divider * SDL_MOUSE_SENSITIVITY_MULTIPLIER);
-
-    // Apply mouse inversion if enabled
-    if (m_invert_mouse)
-    {
-        pitch = -pitch;
-    }
-
-    // Update camera rotation
-    m_camera.Yaw(yaw);
-    m_camera.Pitch(pitch);
+    m_camera.Yaw((x / SDL_RAW_DELTA_SCALE) / m_mouse_divider);
+    m_camera.Pitch((y / SDL_RAW_DELTA_SCALE) / m_mouse_divider * (m_invert_mouse ? -1 : 1));
 }
 
 void View::UpdateKey(int virtKey, KeyState state)
