@@ -28,6 +28,8 @@ public:
     XMMATRIX GetViewProjectionMatrix() const override;
     XMMATRIX GetOrthographicMatrix() const override;
     void GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const override;
+    int GetWidth() const override { return m_width; }
+    int GetHeight() const override { return m_height; }
 
     void SetVerticalFOV(float fov) override;
 

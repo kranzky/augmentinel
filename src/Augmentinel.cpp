@@ -250,8 +250,10 @@ void Augmentinel::Render(IScene *pScene)
 
 		auto dissolved = std::min(std::max((pitch_deg + 25.0f) / 5.0f, 0.0f), 1.0f);
 
-		for (auto &icon : m_icons)
+		for (size_t i = 0; i < m_icons.size(); ++i)
 		{
+			auto &icon = m_icons[i];
+
 			if (m_pView->IsVR())
 			{
 				vPos += vRight * icon_spacing;
@@ -263,9 +265,24 @@ void Augmentinel::Render(IScene *pScene)
 			}
 			else
 			{
-				// Flat mode: keep orthographic positioning but ensure it's within screen bounds
-				// Icons stay at the position set in OnAddEnergySymbol
-				// They use orthographic projection with corrected depth range
+				// Flat mode: Update icon positions based on current window size
+				// This ensures icons stay in top-left corner when window is resized
+				float width = static_cast<float>(m_pView->GetWidth());
+				float height = static_cast<float>(m_pView->GetHeight());
+				float half_width = width / 2.0f;
+				float half_height = height / 2.0f;
+
+				static constexpr auto x_edge_offset = 5.0f;
+				static constexpr auto y_edge_offset = 30.0f;
+				static constexpr auto scale = 27.0f;	 // Icon size - constant regardless of window size
+				static constexpr auto spacing = 27.0f; // Icon spacing - constant regardless of window size
+
+				auto x_base = -half_width + x_edge_offset;
+				auto y = half_height - y_edge_offset;
+
+				icon.pos.x = x_base + spacing * static_cast<float>(i);
+				icon.pos.y = y;
+				icon.scale = scale;
 			}
 
 			pScene->DrawModel(icon);
@@ -1773,13 +1790,25 @@ void Augmentinel::OnHideEnergyPanel()
 
 void Augmentinel::OnAddEnergySymbol(int symbol_idx, int x_offset)
 {
-	// Orthographic screen coordinates: x=[-800,800], y=[-450,450] for 1600x900
+	// Orthographic screen coordinates scale with window size
 	// Position icons at top-left of screen (matching PC version)
-	static constexpr auto x_base = -795.0f; // Near left edge
-	static constexpr auto y = 420.0f;				// Near top edge
+	// Calculate positions based on current window dimensions
+	float width = static_cast<float>(m_pView->GetWidth());
+	float height = static_cast<float>(m_pView->GetHeight());
+	float half_width = width / 2.0f;
+	float half_height = height / 2.0f;
+
+	// Offsets from edges (constant pixel offset)
+	static constexpr auto x_edge_offset = 5.0f;
+	static constexpr auto y_edge_offset = 30.0f;
+
+	// Icon size and spacing - constant regardless of window size (matching PC version)
+	static constexpr auto scale = 27.0f;	 // Icon size in orthographic units
+	static constexpr auto spacing = 35.0f; // Spacing between icons in orthographic units
+
+	auto x_base = -half_width + x_edge_offset;
+	auto y = half_height - y_edge_offset;
 	static constexpr auto z = FAR_CLIP / 2.0f;
-	static constexpr auto scale = 27.0f;	 // Icon size matching PC version
-	static constexpr auto spacing = 15.0f; // Tight spacing like PC version
 
 	// Clear existing icons if the panel is being redrawn.
 	if (x_offset == 0)

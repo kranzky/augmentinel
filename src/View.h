@@ -105,6 +105,8 @@ public:
 	virtual XMMATRIX GetOrthographicMatrix() const = 0;
 	virtual bool IsPointerVisible() const override = 0;
 	virtual void GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const = 0;
+	virtual int GetWidth() const = 0;
+	virtual int GetHeight() const = 0;
 	virtual void BeginScene();
 	virtual void Render(IGame* pRender) = 0;
 	virtual void EndScene() = 0;
