@@ -78,13 +78,13 @@ static std::vector<ActionBinding> action_bindings =
 				{Action::Pause, {VK_P, VK_PAUSE}, "/actions/game/in/pause"},
 				{Action::Absorb, {VK_A, VK_LBUTTON}, "/actions/game/in/select"},
 				{Action::Tree, {VK_T}, "/actions/game/in/tree"},
-				{Action::Boulder, {VK_B, VK_RBUTTON}, "/actions/game/in/boulder"},
+				{Action::Boulder, {VK_B, VK_XBUTTON1}, "/actions/game/in/boulder"},
 				{Action::Robot, {VK_R, VK_MBUTTON}, "/actions/game/in/robot"},
-				{Action::Transfer, {VK_Q, VK_XBUTTON1}, "/actions/game/in/transfer"},
+				{Action::Transfer, {VK_Q, VK_RBUTTON}, "/actions/game/in/transfer"},
 				{Action::Hyperspace, {VK_H}, "/actions/game/in/hyperspace"},
 				{Action::U_Turn, {VK_U}, "/actions/game/in/u_turn"},
 				{Action::ResetHMD, {VK_SPACE}, "/actions/game/in/reset_hmd"},
-				{Action::SkyViewContinue, {VK_ANY}, "/actions/game/in/select"},
+				{Action::SkyViewContinue, {VK_ANY, VK_LBUTTON}, "/actions/game/in/select"},
 				{Action::Pose_LeftPointer, {}, "/actions/game/in/left_pointer"},
 				{Action::Pose_RightPointer, {}, "/actions/game/in/right_pointer"},
 				{Action::Haptic_Seen, {}, "/actions/game/out/haptic"},
@@ -223,7 +223,7 @@ void Augmentinel::PlayMusic()
 		// Use PlayMusic() instead of Play() - music uses Mix_Music*, not Mix_Chunk*
 		if (it_music != music_files.end())
 		{
-			m_pAudio->PlayMusic(*it_music, true);  // Loop music
+			m_pAudio->PlayMusic(*it_music, true); // Loop music
 			m_pAudio->SetMusicVolume(m_music_volume / 100.0f);
 		}
 		else
@@ -391,7 +391,7 @@ void Augmentinel::Frame(float fElapsed)
 	{
 	case GameState::Reset:
 	{
-		if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
+		if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
 			break;
 
 		SetSeen(SeenState::Unseen);
@@ -480,7 +480,7 @@ void Augmentinel::Frame(float fElapsed)
 
 		case 2:
 			// Fade out the title screen.
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
 				break;
 
 			if (!RunUntilStateChange())
@@ -578,7 +578,7 @@ void Augmentinel::Frame(float fElapsed)
 				m_landscape.rot.y += fElapsed / 8.0f;
 
 			// Fade in landscape preview without delaying keyboard interaction.
-			m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed);
+			m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.1f);
 
 			const auto it_current = m_codes.find(m_landscape_bcd);
 			auto it_new = it_current;
@@ -650,7 +650,7 @@ void Augmentinel::Frame(float fElapsed)
 			break;
 		}
 		case 2:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
 				break;
 
 			m_landscape.rot.y = 0.0f;
@@ -857,7 +857,7 @@ void Augmentinel::Frame(float fElapsed)
 		switch (m_substate)
 		{
 		case 0:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
 				break;
 
 			SetSeen(SeenState::Unseen);
@@ -895,18 +895,27 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 2:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f))
-				break;
+			static bool fade_complete = false;
+			if (!fade_complete)
+			{
+				fade_complete = m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f);
+				if (!fade_complete)
+					break;
+			}
 
 			if (m_pView->InputAction(Action::SkyViewContinue))
+			{
+				fade_complete = false; // Reset for next time
 				m_substate++;
+			}
 
 			break;
 
 		case 3:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
 				break;
 
+			PlayTune(UTURN_TUNE);
 			ChangeState(GameState::Game);
 			break;
 		}
