@@ -6,23 +6,34 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Default to Release build if not specified
-if(NOT CMAKE_BUILD_TYPE)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# Release build optimizations
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
-
-# Debug build flags
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
-set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
+# Platform-specific compiler flags
+if(MSVC)
+    # MSVC flags
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /DNDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "/O2 /DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "/Od /Zi /DDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "/Od /Zi /DDEBUG")
+    # Suppress some common warnings
+    add_compile_options(/W3 /wd4244 /wd4267 /wd4996)
+    # Enable static runtime for standalone distribution
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+else()
+    # GCC/Clang flags
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
+endif()
 
 # Platform definitions
 if(APPLE)
     add_definitions(-D__APPLE__ -DPLATFORM_MACOS)
 elseif(WIN32)
-    add_definitions(-DWIN32 -DPLATFORM_WINDOWS)
+    add_definitions(-DWIN32 -DPLATFORM_WINDOWS -D_CRT_SECURE_NO_WARNINGS)
 elseif(UNIX)
     add_definitions(-D__linux__ -DPLATFORM_LINUX)
 endif()
@@ -30,6 +41,11 @@ endif()
 # Find packages
 find_package(SDL2 REQUIRED CONFIG)
 find_package(OpenGL REQUIRED)
+
+# GLEW (required on Windows/Linux, not needed on macOS)
+if(NOT APPLE)
+    find_package(GLEW REQUIRED)
+endif()
 
 # SDL2_mixer
 find_library(SDL2_MIXER_LIBRARY SDL2_mixer REQUIRED)
@@ -158,6 +174,7 @@ target_include_directories(Augmentinel PRIVATE
     ${directxmath_SOURCE_DIR}/Inc
 )
 
+# Base libraries
 target_link_libraries(Augmentinel
     SDL2::SDL2
     ${SDL2_MIXER_LIBRARY}
@@ -165,11 +182,30 @@ target_link_libraries(Augmentinel
     OpenGL::GL
 )
 
-# macOS-specific settings
+# Platform-specific settings
 if(APPLE)
     target_compile_definitions(Augmentinel PRIVATE
         GL_SILENCE_DEPRECATION
         PLATFORM_MACOS
+        _XM_NO_INTRINSICS_
+        CPU_Z80_DEPENDENCIES_H="Z80-support.h"
+        CPU_Z80_USE_LOCAL_HEADER
+    )
+elseif(WIN32)
+    # GLEW for OpenGL extension loading
+    target_link_libraries(Augmentinel GLEW::GLEW)
+    target_compile_definitions(Augmentinel PRIVATE
+        PLATFORM_WINDOWS
+        CPU_Z80_DEPENDENCIES_H="Z80-support.h"
+        CPU_Z80_USE_LOCAL_HEADER
+    )
+    # Create Windows GUI application (not console)
+    set_target_properties(Augmentinel PROPERTIES WIN32_EXECUTABLE TRUE)
+elseif(UNIX)
+    # Linux
+    target_link_libraries(Augmentinel GLEW::GLEW)
+    target_compile_definitions(Augmentinel PRIVATE
+        PLATFORM_LINUX
         _XM_NO_INTRINSICS_
         CPU_Z80_DEPENDENCIES_H="Z80-support.h"
         CPU_Z80_USE_LOCAL_HEADER

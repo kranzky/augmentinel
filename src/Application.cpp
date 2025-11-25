@@ -69,6 +69,18 @@ bool Application::Init()
         return false;
     }
 
+#ifndef PLATFORM_MACOS
+    // Initialize GLEW on Windows/Linux (macOS doesn't need it)
+    glewExperimental = GL_TRUE;
+    GLenum glewErr = glewInit();
+    if (glewErr != GLEW_OK)
+    {
+        SDL_Log("GLEW initialization failed: %s", glewGetErrorString(glewErr));
+        return false;
+    }
+    SDL_Log("GLEW initialized: %s", glewGetString(GLEW_VERSION));
+#endif
+
     // Enable VSync
     SDL_GL_SetSwapInterval(1);
 

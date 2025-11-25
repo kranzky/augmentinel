@@ -1365,7 +1365,8 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [x] macOS app bundle with icon ✅
 - [x] DMG creation for distribution ✅
 - [x] Test app bundle on macOS ✅
-- [ ] Windows build - pending
+- [x] Windows build support (CMake + vcpkg) ✅
+- [x] build.bat packaging script ✅
 
 ### 6.3: Final Testing ✅
 

@@ -7,16 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Augmentinel is a re-skinned version of Geoff Crammond's classic game "The Sentinel" (aka The Sentry). It emulates the ZX Spectrum version for authentic gameplay while adding modern enhancements including accelerated 3D rendering, VR support, and features from other platform ports.
 
 **IMPORTANT:** This codebase has TWO implementations:
-1. **Windows (Original)** - Win32 + Direct3D 11 - Fully functional
-2. **SDL2 + OpenGL (Port)** - macOS/Linux - **Currently in development (Phase 4 - Polish & Features)**
-
-When working on this codebase, check:
-- **For SDL2+OpenGL port work:** See `PORTING_TODO.md` for current status and next tasks
-- **For Windows version:** Original build instructions below
+1. **SDL2 + OpenGL (Port)** - macOS/Windows - ✅ **COMPLETE - Ready for Release**
+2. **Windows (Legacy)** - Win32 + Direct3D 11 + VR - For VR headset support only
 
 ## Build Commands
 
-### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
+### SDL2 + OpenGL (macOS) - **RECOMMENDED**
 
 **Status**: ✅ COMPLETE - Ready for Release
 
@@ -26,13 +22,6 @@ When working on this codebase, check:
 ./build.sh release    # Optimized release build (-O3)
 ./build.sh clean      # Remove build directories
 ./build.sh package    # Create app bundle + DMG for distribution
-```
-
-**Manual Build:**
-```bash
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build .
 ```
 
 **Run:**
@@ -49,7 +38,38 @@ cmake --build .
 #   release/Augmentinel-1.6.0-macOS.dmg  - Distribution DMG
 ```
 
-**Implementation Complete:**
+### SDL2 + OpenGL (Windows) - **RECOMMENDED**
+
+**Prerequisites:**
+1. Visual Studio 2019+ with C++ tools
+2. CMake 3.15+
+3. vcpkg package manager
+
+**Install dependencies via vcpkg:**
+```cmd
+vcpkg install sdl2:x64-windows sdl2-mixer:x64-windows sdl2-ttf:x64-windows glew:x64-windows
+```
+
+**Build:**
+```cmd
+build.bat debug       # Debug build
+build.bat release     # Optimized release build
+build.bat clean       # Remove build directories
+build.bat package     # Build and create distributable package
+```
+
+**Release Output:**
+```
+release\Augmentinel-1.6.0-windows\
+├── Augmentinel.exe
+├── 48.rom
+├── sentinel.sna
+├── shaders\
+├── sounds\
+└── *.dll (SDL2, GLEW, etc.)
+```
+
+### Implementation Complete (Both Platforms):
 - ✅ SDL2 windowing and OpenGL 3.3 Core context
 - ✅ GLSL shaders (Sentinel.vert/frag, Effect.vert/frag)
 - ✅ Full game loop with input system (keyboard + mouse)
@@ -59,36 +79,32 @@ cmake --build .
 - ✅ Fullscreen toggle (F11 or ALT+Enter)
 - ✅ Energy UI display with orthographic projection
 - ✅ Screen effects (fade, dissolve, desaturate)
-- ✅ macOS app bundle with icon
-- ✅ DMG packaging for distribution
 
 **Key Files:**
-- `build.sh` - Build and packaging script
+- `build.sh` - macOS build and packaging script
+- `build.bat` - Windows build and packaging script
+- `CMakeLists.txt` - Cross-platform CMake configuration
 - `src/OpenGLRenderer.cpp/h` - OpenGL renderer implementation
 - `src/Application.cpp/h` - SDL2 application/window management
 - `src/Settings.cpp/h` - Settings persistence (SimpleIni)
 - `shaders/*.vert, *.frag` - GLSL shaders (OpenGL 3.3)
-- `PORTING_TODO.md` - Detailed progress tracking
 
-### Windows (Original)
+### Windows (Legacy - DirectX 11 + VR)
 
-**Build the project:**
-```bash
-# Open solution in Visual Studio 2019 or later
-# Build using Visual Studio GUI or:
+For VR headset support only. Uses original Win32/D3D11 codebase.
+
+**Build:**
+```cmd
+:: Open Augmentinel.sln in Visual Studio 2019+
+:: Or from command line:
 msbuild Augmentinel.sln /p:Configuration=Release /p:Platform=x64
 ```
-
-**Supported configurations:**
-- Debug|Win32
-- Debug|x64
-- Release|Win32
-- Release|x64
 
 **Requirements:**
 - Visual Studio 2019 or later (v142 toolset)
 - Windows 10 SDK
-- DirectX SDK (June 2010) for D3D11 libraries
+- DirectX SDK (June 2010)
+- OpenVR SDK (included)
 
 ## Architecture
 
