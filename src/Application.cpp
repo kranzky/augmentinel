@@ -338,6 +338,31 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
         return;
     }
 
+    // Special case: F11 or ALT+Enter to toggle fullscreen
+    bool isFullscreenToggle = (key.keysym.sym == SDLK_F11) ||
+                               (key.keysym.sym == SDLK_RETURN && (key.keysym.mod & KMOD_ALT));
+    if (isFullscreenToggle && pressed)
+    {
+        m_fullscreen = !m_fullscreen;
+        if (m_fullscreen)
+        {
+            // Store windowed size before going fullscreen
+            m_windowedWidth = m_windowWidth;
+            m_windowedHeight = m_windowHeight;
+            SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+            SDL_Log("Fullscreen mode enabled");
+        }
+        else
+        {
+            SDL_SetWindowFullscreen(m_window, 0);
+            // Restore windowed size
+            SDL_SetWindowSize(m_window, m_windowedWidth, m_windowedHeight);
+            SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+            SDL_Log("Windowed mode enabled");
+        }
+        return;
+    }
+
     // Special case: Number keys 1-4 to switch sound packs
     if (pressed && m_pAudio)
     {

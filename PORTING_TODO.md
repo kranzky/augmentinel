@@ -1106,7 +1106,7 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
   - [x] Changed `VK_OEM_PLUS` mapping from `SDLK_PLUS` to `SDLK_EQUALS`
   - [x] The `=` key (unshifted) now properly increases music volume
   - [x] The `-` key decreases volume (was already working)
-- [ ] Implement full-screen toggle (with keybinding F11 or whatever makes the most sense)
+- [x] Implement full-screen toggle (with keybinding F11 or whatever makes the most sense)
 - [ ] Implement settings persistence
   - [ ] Choose INI library (SimpleIni or alternatives)
   - [ ] Implement InitSettings(), GetSetting(), SetSetting()
@@ -1121,6 +1121,7 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
   - [ ] Sound effects volume
   - [ ] Tune selection (BBC/C64/Spectrum/Amiga)
   - [ ] Music enable/disable
+  - [ ] Tunes enable/disable
 - [ ] Landscape settings
   - [ ] Remember last played landscape
   - [ ] Remember all played landscapes
@@ -1381,7 +1382,7 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 ## Future Enhancements (Post-Port)
 
 - [ ] Game pad support (SDL2 joystick/gamepad API)
-- [ ] Spatial audio (3D sound positioning)
+- [x] Spatial audio (3D sound positioning)
 - [ ] Tint tiles red to indicate sentinel sight; toggle on and off with a V key (for "vision")
 - [ ] When switching sound pack, also switch rendering style and resolution and palette to match (use screenshots from each platform as reference)
 
