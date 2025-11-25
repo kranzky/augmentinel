@@ -107,6 +107,16 @@ using namespace DirectX;
 #define VK_MBUTTON    (1000 + SDL_BUTTON_MIDDLE)
 #define VK_XBUTTON1   (1000 + SDL_BUTTON_X1)
 #define VK_XBUTTON2   (1000 + SDL_BUTTON_X2)
+
+// Modifier key mappings (used for exclusion from VK_ANY)
+#define VK_LSHIFT     SDLK_LSHIFT
+#define VK_RSHIFT     SDLK_RSHIFT
+#define VK_LCONTROL   SDLK_LCTRL
+#define VK_RCONTROL   SDLK_RCTRL
+#define VK_LALT       SDLK_LALT
+#define VK_RALT       SDLK_RALT
+#define VK_LGUI       SDLK_LGUI    // Command key on macOS
+#define VK_RGUI       SDLK_RGUI    // Command key on macOS
 #endif
 
 // Include common game headers

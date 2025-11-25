@@ -69,14 +69,25 @@ bool View::InputAction(Action action)
         }
     }
 
-    // Special handling for VK_ANY - any key pressed (excluding ESC)
+    // Special handling for VK_ANY - any key pressed (excluding ESC and modifier keys)
     if (std::find(it->second.begin(), it->second.end(), VK_ANY) != it->second.end())
     {
-        // Check if any key is pressed, but exclude ESC
+        // Check if any key is pressed, but exclude ESC and modifier keys
+        // This allows ALT-TAB, screenshots, etc. without triggering game actions
         for (const auto &pair : m_keys)
         {
-            if (pair.first != VK_ESCAPE &&
-                (pair.second == KeyState::Down || pair.second == KeyState::DownEdge))
+            int key = pair.first;
+            // Skip ESC and modifier keys (shift, ctrl, alt, gui/command)
+            if (key == VK_ESCAPE ||
+                key == VK_LSHIFT || key == VK_RSHIFT ||
+                key == VK_LCONTROL || key == VK_RCONTROL ||
+                key == VK_LALT || key == VK_RALT ||
+                key == VK_LGUI || key == VK_RGUI)
+            {
+                continue;
+            }
+
+            if (pair.second == KeyState::Down || pair.second == KeyState::DownEdge)
             {
                 return true;
             }

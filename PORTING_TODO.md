@@ -1086,11 +1086,18 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 
 ### 4.2: Settings System
 
-- [ ] Fix issue toggling music back on after turning it off
-- [ ] Fix issue lowering music volume to zero then raising it back up
-- [ ] Stop playing sounds and tunes on a state change (e.g., title screen to landscape preview or escaping from game)
+- [x] Fix issue toggling music back on after turning it off ✅
+  - [x] Changed `Stop(AudioType::Music)` to use `Mix_PauseMusic()` instead of `Mix_HaltMusic()`
+  - [x] Fixed `SetMusicPlaying()` to detect halted music and signal caller to start new track
+- [x] Fix issue lowering music volume to zero then raising it back up ✅
+  - [x] Volume control was already working correctly via `SetMusicVolume()`
+- [x] Stop playing sounds and tunes on a state change ✅
+  - [x] Added `Stop(AudioType::Tune)` and `Stop(AudioType::LoopingEffect)` to `ChangeState()`
+  - [x] Music continues across state changes, one-shot effects allowed to finish
 - [ ] Implement full-screen toggle (with keybinding F11 or whatever makes the most sense)
-- [ ] Don't include modifier keys as any keys (so we can ALT-TAB away and take screenshots etc)
+- [x] Don't include modifier keys as any keys (ALT-TAB, screenshots, etc.) ✅
+  - [x] Added VK_ mappings for SHIFT, CTRL, ALT, GUI (Command) keys in Platform.h
+  - [x] Modified VK_ANY handling in `View::InputAction()` to exclude modifier keys
 - [ ] Implement settings persistence
   - [ ] Choose INI library (SimpleIni or alternatives)
   - [ ] Implement InitSettings(), GetSetting(), SetSetting()

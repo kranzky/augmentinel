@@ -242,10 +242,23 @@ void Audio::SetMusicVolume(float volume) {
 bool Audio::SetMusicPlaying(bool play) {
     if (!m_initialized || !m_music) return false;
 
-    if (play && !m_musicPlaying) {
-        Mix_ResumeMusic();
-        m_musicPlaying = true;
-    } else if (!play && m_musicPlaying) {
+    if (play) {
+        // Check if music is actually playing or paused
+        // Mix_PlayingMusic() returns 1 if music is playing, 0 if not (including when paused)
+        // Mix_PausedMusic() returns 1 if music is paused, 0 if not
+        bool isActive = Mix_PlayingMusic() || Mix_PausedMusic();
+
+        if (!isActive) {
+            // Music was halted/stopped, needs to be restarted from scratch
+            m_musicPlaying = false;
+            return false;  // Signal caller to start new music
+        }
+
+        if (!m_musicPlaying) {
+            Mix_ResumeMusic();
+            m_musicPlaying = true;
+        }
+    } else if (m_musicPlaying) {
         Mix_PauseMusic();
         m_musicPlaying = false;
     }
@@ -304,8 +317,9 @@ void Audio::Stop(AudioType type) {
 
     switch (type) {
         case AudioType::Music:
-            // Stop music (Mix_Music*)
-            Mix_HaltMusic();
+            // Pause music (so it can be resumed with SetMusicPlaying)
+            // Use Mix_PauseMusic instead of Mix_HaltMusic for resumability
+            Mix_PauseMusic();
             m_musicPlaying = false;
             break;
 

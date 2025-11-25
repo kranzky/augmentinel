@@ -1363,6 +1363,13 @@ void Augmentinel::ChangeState(GameState new_state)
 	m_state = new_state;
 	m_substate = 0;
 
+	// Stop all sounds and tunes when changing state (music continues)
+	// This prevents lingering sound effects and jingles during transitions
+	m_pAudio->Stop(AudioType::Tune);
+	m_pAudio->Stop(AudioType::LoopingEffect);
+	// Note: We don't stop AudioType::Effect as they are short one-shots
+	// Note: We don't stop AudioType::Music - music continues across states
+
 	// Clear model cache when changing states to prevent stale geometry
 	// from being reused when memory addresses are recycled
 	auto renderer = std::dynamic_pointer_cast<OpenGLRenderer>(m_pView);
