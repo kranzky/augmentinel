@@ -112,9 +112,13 @@ bool Application::Init()
     // Create audio
     m_pAudio = std::make_shared<Audio>();
 
-    // Restore sound pack from settings
-    int savedSoundPack = GetSetting(L"SoundPack", static_cast<int>(SoundPack::Amiga));
-    m_pAudio->SetSoundPack(static_cast<SoundPack>(savedSoundPack));
+    // Restore sound pack from settings (stored as pack name string)
+    std::wstring savedPackName = GetSetting(L"SoundPack", std::wstring(L"Commodore Amiga"));
+    SoundPack savedPack = SoundPack::Amiga;
+    if (savedPackName == L"Commodore 64") savedPack = SoundPack::C64;
+    else if (savedPackName == L"BBC Micro") savedPack = SoundPack::BBC;
+    else if (savedPackName == L"Sinclair ZX Spectrum") savedPack = SoundPack::Spectrum;
+    m_pAudio->SetSoundPack(savedPack);
 
     // Create game
     m_pGame = std::make_unique<Augmentinel>(m_pRenderer, m_pAudio);
@@ -414,7 +418,8 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
         if (newPack != m_pAudio->GetSoundPack())
         {
             m_pAudio->SetSoundPack(newPack);
-            SetSetting(L"SoundPack", static_cast<int>(newPack));
+            // Save as pack name string (matches how Augmentinel.cpp reads it)
+            SetSetting(L"SoundPack", std::wstring(to_wstring(m_pAudio->GetSoundPackName(newPack))));
             return;
         }
     }

@@ -123,7 +123,8 @@ Augmentinel::Augmentinel(std::shared_ptr<View> &pView, std::shared_ptr<Audio> &p
 		: m_pView(pView), m_pAudio(pAudio)
 {
 	// Pre-load all sound effects and music from the current sound pack.
-	auto sound_path = fs::path(SOUND_PACK_DIR) / GetSetting(SOUND_PACK_KEY, DEFAULT_SOUND_PACK);
+	// Use Audio's configured path (already set by Application from settings)
+	auto sound_path = pAudio->GetSoundsDir();
 	for (auto &sound : effects_and_tunes)
 		pAudio->LoadWAV(sound_path / sound);
 

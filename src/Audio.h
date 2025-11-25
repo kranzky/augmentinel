@@ -54,6 +54,7 @@ public:
     void SetSoundPack(SoundPack pack);
     SoundPack GetSoundPack() const { return m_currentPack; }
     const char* GetSoundPackName(SoundPack pack) const;
+    const fs::path& GetSoundsDir() const { return m_soundsDir; }
 
 private:
     bool m_initialized{false};
