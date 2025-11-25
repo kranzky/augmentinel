@@ -142,8 +142,8 @@ Augmentinel::Augmentinel(std::shared_ptr<View> &pView, std::shared_ptr<Audio> &p
 	it_music = music_files.begin();
 
 	// Sound settings.
-	m_tunes_enabled = GetSetting(TUNES_ENABLED_KEY, DEFAULT_TUNES_ENABLED);
-	m_music_enabled = GetSetting(MUSIC_ENABLED_KEY, DEFAULT_MUSIC_ENABLED);
+	m_tunes_enabled = GetFlag(TUNES_ENABLED_KEY, DEFAULT_TUNES_ENABLED);
+	m_music_enabled = GetFlag(MUSIC_ENABLED_KEY, DEFAULT_MUSIC_ENABLED);
 	m_music_volume = GetSetting(MUSIC_VOLUME_KEY, DEFAULT_MUSIC_VOLUME);
 
 	// Set input bindings.

@@ -75,8 +75,27 @@ bool Application::Init()
     SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
     SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
 
+    // Set settings path to be alongside executable
+    char* basePath = SDL_GetBasePath();
+    if (basePath) {
+        settings_path = std::wstring(basePath, basePath + strlen(basePath)) + L"settings.ini";
+        SDL_free(basePath);
+    } else {
+        settings_path = L"settings.ini";
+    }
+
     // Initialize settings
     InitSettings(APP_NAME);
+
+    // Restore fullscreen state from settings
+    m_fullscreen = GetFlag(L"Fullscreen", false);
+    if (m_fullscreen)
+    {
+        m_windowedWidth = m_windowWidth;
+        m_windowedHeight = m_windowHeight;
+        SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_Log("Restored fullscreen mode from settings");
+    }
 
     // Create renderer
     auto pOpenGLRenderer = std::make_shared<OpenGLRenderer>(m_windowWidth, m_windowHeight);
@@ -89,6 +108,10 @@ bool Application::Init()
 
     // Create audio
     m_pAudio = std::make_shared<Audio>();
+
+    // Restore sound pack from settings
+    int savedSoundPack = GetSetting(L"SoundPack", static_cast<int>(SoundPack::Amiga));
+    m_pAudio->SetSoundPack(static_cast<SoundPack>(savedSoundPack));
 
     // Create game
     m_pGame = std::make_unique<Augmentinel>(m_pRenderer, m_pAudio);
@@ -344,6 +367,7 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
     if (isFullscreenToggle && pressed)
     {
         m_fullscreen = !m_fullscreen;
+        SetSetting(L"Fullscreen", m_fullscreen);
         if (m_fullscreen)
         {
             // Store windowed size before going fullscreen
@@ -366,20 +390,29 @@ void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
     // Special case: Number keys 1-4 to switch sound packs
     if (pressed && m_pAudio)
     {
+        SoundPack newPack = m_pAudio->GetSoundPack();
         switch (key.keysym.sym)
         {
             case SDLK_1:
-                m_pAudio->SetSoundPack(SoundPack::Amiga);
-                return;
+                newPack = SoundPack::Amiga;
+                break;
             case SDLK_2:
-                m_pAudio->SetSoundPack(SoundPack::C64);
-                return;
+                newPack = SoundPack::C64;
+                break;
             case SDLK_3:
-                m_pAudio->SetSoundPack(SoundPack::BBC);
-                return;
+                newPack = SoundPack::BBC;
+                break;
             case SDLK_4:
-                m_pAudio->SetSoundPack(SoundPack::Spectrum);
-                return;
+                newPack = SoundPack::Spectrum;
+                break;
+            default:
+                break;
+        }
+        if (newPack != m_pAudio->GetSoundPack())
+        {
+            m_pAudio->SetSoundPack(newPack);
+            SetSetting(L"SoundPack", static_cast<int>(newPack));
+            return;
         }
     }
 
