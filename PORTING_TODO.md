@@ -2,7 +2,7 @@
 
 **Status:** Phase 1-4 Complete ✅
 **Current Phase:** Phase 5 (Polish & Testing) - Deprecation warnings, settings, final testing
-**Last Updated:** 2025-11-22
+**Last Updated:** 2025-11-25
 
 Use this file to track progress through the SDL2+OpenGL port. Check off items as you complete them.
 
@@ -1082,7 +1082,9 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - f0641ca: Channel management and AudioType handling
 - c103d2c: Sound pack switching with hot-reload
 - df2fea2: Documentation updates
-- [final]: MP3 file loading and music start timing fixes
+- 01149b4: MP3 file loading and music start timing fixes
+- 2691b3e: Fix music toggle (pause vs halt) and modifier key exclusion
+- b99b464: Fix volume up key (= vs +) and refine state change sound stopping
 
 ### 4.2: Settings System
 
@@ -1094,10 +1096,17 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [x] Stop playing sounds and tunes on a state change ✅
   - [x] Added `Stop(AudioType::Tune)` and `Stop(AudioType::LoopingEffect)` to `ChangeState()`
   - [x] Music continues across state changes, one-shot effects allowed to finish
-- [ ] Implement full-screen toggle (with keybinding F11 or whatever makes the most sense)
+  - [x] **Refined:** Only stop sounds on landscape-to-game transitions (not u-turn, title, etc.)
+  - [x] Transitions that stop sounds: LandscapePreview→Game, Game→LandscapePreview, Game→Reset
+  - [x] Transitions that preserve sounds: TitleScreen→LandscapePreview, U-turn, SkyView
 - [x] Don't include modifier keys as any keys (ALT-TAB, screenshots, etc.) ✅
   - [x] Added VK_ mappings for SHIFT, CTRL, ALT, GUI (Command) keys in Platform.h
   - [x] Modified VK_ANY handling in `View::InputAction()` to exclude modifier keys
+- [x] Fix volume up key not working ✅
+  - [x] Changed `VK_OEM_PLUS` mapping from `SDLK_PLUS` to `SDLK_EQUALS`
+  - [x] The `=` key (unshifted) now properly increases music volume
+  - [x] The `-` key decreases volume (was already working)
+- [ ] Implement full-screen toggle (with keybinding F11 or whatever makes the most sense)
 - [ ] Implement settings persistence
   - [ ] Choose INI library (SimpleIni or alternatives)
   - [ ] Implement InitSettings(), GetSetting(), SetSetting()
@@ -1535,6 +1544,77 @@ glslangValidator shaders/Sentinel.frag
 
 **Issue:** Performance poor
 **Solution:** Profile with Instruments, check for unnecessary state changes, verify VSync settings
+
+---
+
+## Code Improvement Suggestions
+
+These are potential optimizations and improvements identified during code review (2025-11-25):
+
+### High Priority (Should Address)
+
+1. **Deprecation Warnings (Utils.h:50-62)**
+   - `std::codecvt_utf8` and `std::wstring_convert` are deprecated in C++17
+   - Impact: Build warnings (code still works)
+   - **Solution options:**
+     - Use platform-specific converters (`mbstowcs`/`wcstombs` on macOS/Linux)
+     - Use third-party library (ICU, boost::locale)
+     - Target C++20 with `std::format` (requires CMake/compiler updates)
+
+2. **Settings System Not Persisted (Settings.cpp)**
+   - Current: All `GetSetting()` calls return defaults
+   - Settings don't save between sessions
+   - **Solution:** Implement SimpleIni integration as planned in Phase 4.2
+
+### Medium Priority (Nice to Have)
+
+3. **Spatial Audio Not Implemented (Audio.cpp:174-176)**
+   ```cpp
+   // TODO: Implement 3D spatial audio
+   void Audio::Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos) {
+       Play(filename, type);  // Position ignored
+   }
+   ```
+   - **Solution:** Use `Mix_SetPosition()` and `Mix_SetDistance()` for stereo panning
+
+4. **PlaySound() Memory Leak (Audio.cpp:199)**
+   - Comment notes: "This leaks the chunk, but it's simple for one-off sounds"
+   - **Solution:** Track chunks in a map for proper cleanup, or use Mix_Chunk pool
+
+5. **Model Cache Memory Growth**
+   - `ClearModelCache()` exists but may not be called frequently
+   - Could accumulate GPU memory over very long sessions
+   - **Solution:** Call `ClearModelCache()` when loading new levels or after N levels
+
+### Low Priority (Future Enhancements)
+
+6. **Add Gamepad Support**
+   - SDL2 has `SDL_GameController` API
+   - Would improve Steam Deck / living room experience
+
+7. **Add Fullscreen Toggle (F11)**
+   - Listed in Phase 4.2 but not yet implemented
+   - Use `SDL_SetWindowFullscreen()`
+
+8. **Add Retina/HiDPI Support**
+   - Check `SDL_GetWindowSizeInPixels()` vs `SDL_GetWindowSize()`
+   - May need to adjust orthographic projection for HiDPI
+
+### Performance Observations
+
+- Current: ~60 FPS at 1600x900 (VSync enabled)
+- Draw calls: ~143/frame (title screen)
+- GPU model caching is efficient (keyed by vertex pointer)
+- Spectrum emulation runs at 50 FPS (authentic)
+- No identified bottlenecks
+
+### Architecture Strengths
+
+- Clean platform abstraction via `Platform.h`
+- Polymorphic rendering (View base class)
+- Efficient uniform buffer management (std140 layout)
+- Well-organized audio channel management
+- Smart model caching strategy
 
 ---
 

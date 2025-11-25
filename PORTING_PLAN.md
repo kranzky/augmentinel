@@ -3,7 +3,7 @@
 **Version:** 1.0
 **Target Platform:** macOS (with cross-platform support)
 **Timeline:** 1-2 weeks of focused development
-**Last Updated:** 2025-11-22
+**Last Updated:** 2025-11-25
 
 ---
 
@@ -105,6 +105,45 @@ See PORTING_TODO.md for detailed completion checklist and learnings.
 - VR mode repositions icons dynamically relative to camera
 
 **Next:** Phase 4.2, 4.3, 4.5 - Settings, game state, screen effects
+
+---
+
+## ✅ Phase 4.2 Partial Update (2025-11-25)
+
+**Audio & Input Fixes COMPLETE** - Key bugs resolved! ✅
+
+**Audio Fixes:**
+- ✅ Music toggle (M key) now properly pauses/resumes instead of halting
+  - Changed `Stop(AudioType::Music)` to use `Mix_PauseMusic()` instead of `Mix_HaltMusic()`
+  - `SetMusicPlaying()` now detects halted music and signals caller to restart
+- ✅ Volume control fixed
+  - `VK_OEM_PLUS` now maps to `SDLK_EQUALS` (= key) instead of `SDLK_PLUS` (+ requires shift)
+  - Volume up (=) and down (-) keys work correctly
+
+**Input Fixes:**
+- ✅ Modifier keys excluded from VK_ANY detection
+  - Added VK_ mappings for SHIFT, CTRL, ALT, GUI (Command) keys in Platform.h
+  - ALT-TAB, screenshots, and other system shortcuts no longer trigger game actions
+
+**State Transition Refinement:**
+- ✅ Sound stopping now only occurs on specific transitions:
+  - LandscapePreview → Game (entering game)
+  - Game → LandscapePreview (leaving to landscape select)
+  - Game → Reset (ESC from game)
+- ✅ Sounds continue playing during:
+  - TitleScreen → LandscapePreview
+  - U-turn within game
+  - SkyView transitions
+
+**Key Commits:**
+- 2691b3e: Fix music toggle (pause vs halt) and modifier key exclusion
+- b99b464: Fix volume up key (= vs +) and refine state change sound stopping
+
+**Remaining for Phase 4.2:**
+- ⏳ Fullscreen toggle (F11 key)
+- ⏳ Settings persistence (SimpleIni integration)
+
+**Next:** Phase 5 - Polish & Testing
 
 ---
 
