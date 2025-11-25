@@ -117,6 +117,11 @@ using namespace DirectX;
 #define VK_RGUI       SDLK_RGUI    // Command key on macOS
 #endif
 
+// Global resource path (set by Application, used for loading assets)
+// On macOS app bundles this points to Contents/Resources/
+// Otherwise it's the executable directory
+extern std::string g_resourcePath;
+
 // Include common game headers
 #include "SharedConstants.h"
 #include "Utils.h"

@@ -21,7 +21,7 @@ constexpr auto VOLUME_STEP = 10;						 // volume adjustment step percentage.
 constexpr auto POINTER_SCALE = 4;						 // 3D pointer block scale.
 constexpr auto TEMP_ID_BASE = 0x100;				 // Base id for temporary model.
 
-constexpr auto SENTINEL_SNAPSHOT_FILE = L"./sentinel.sna";
+constexpr auto SENTINEL_SNAPSHOT_FILE = L"sentinel.sna";
 
 static const auto LANDSCAPES_SECTION{L"Landscapes"};
 static const auto LAST_LANDSCAPE_KEY{L"LastLandscape"};
@@ -128,7 +128,7 @@ Augmentinel::Augmentinel(std::shared_ptr<View> &pView, std::shared_ptr<Audio> &p
 	for (auto &sound : effects_and_tunes)
 		pAudio->LoadWAV(sound_path / sound);
 
-	auto music_path = fs::path(SOUND_PACK_DIR) / MUSIC_SUBDIR;
+	auto music_path = fs::path(g_resourcePath) / SOUND_PACK_DIR / MUSIC_SUBDIR;
 	for (auto &p : fs::directory_iterator(music_path))
 	{
 		if (p.path().extension() == ".mp3")

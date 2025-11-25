@@ -413,7 +413,7 @@ void OpenGLRenderer::GetSelectionRay(XMVECTOR& vPos, XMVECTOR& vDir) const {
 
 std::string OpenGLRenderer::LoadShaderFile(const std::string& filename) {
     // Try to open the shader file from the shaders/ directory
-    std::string path = "shaders/" + filename;
+    std::string path = g_resourcePath + "shaders/" + filename;
     std::ifstream file(path);
 
     if (!file.is_open()) {

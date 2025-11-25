@@ -34,8 +34,8 @@ Audio::Audio() {
     m_initialized = true;
 
     // Set default sound directories (Amiga sounds by default)
-    m_soundsDir = "sounds/Commodore Amiga";
-    m_musicDir = "sounds/music";
+    m_soundsDir = g_resourcePath + "sounds/Commodore Amiga";
+    m_musicDir = g_resourcePath + "sounds/music";
 
     // Don't start music automatically - let the game control when music starts
     // Music will begin when entering landscape select screen
@@ -498,7 +498,7 @@ void Audio::SetSoundPack(SoundPack pack) {
     m_currentPack = pack;
 
     // Update sounds directory based on pack
-    m_soundsDir = std::string("sounds/") + GetSoundPackName(pack);
+    m_soundsDir = g_resourcePath + "sounds/" + GetSoundPackName(pack);
 
     // Clear all cached sounds
     for (auto& [name, chunk] : m_sounds) {

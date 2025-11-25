@@ -9,6 +9,9 @@
 
 static constexpr float MAX_ACCUMULATED_TIME = 0.25f;
 
+// Global resource path
+std::string g_resourcePath;
+
 Application::Application()
 {
 }
@@ -75,14 +78,32 @@ bool Application::Init()
     SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
     SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
 
-    // Set settings path to be alongside executable
+    // Set resource and settings paths
     char* basePath = SDL_GetBasePath();
     if (basePath) {
-        settings_path = std::wstring(basePath, basePath + strlen(basePath)) + L"settings.ini";
+        std::string base(basePath);
         SDL_free(basePath);
+
+#ifdef PLATFORM_MACOS
+        // Check if we're in an app bundle (path ends with .app/Contents/MacOS/)
+        if (base.find(".app/Contents/MacOS/") != std::string::npos) {
+            // Resources are in ../Resources/ relative to executable
+            g_resourcePath = base + "../Resources/";
+            // Settings stay alongside executable for easy access
+            settings_path = std::wstring(base.begin(), base.end()) + L"settings.ini";
+        } else {
+            g_resourcePath = base;
+            settings_path = std::wstring(base.begin(), base.end()) + L"settings.ini";
+        }
+#else
+        g_resourcePath = base;
+        settings_path = std::wstring(base.begin(), base.end()) + L"settings.ini";
+#endif
     } else {
+        g_resourcePath = "./";
         settings_path = L"settings.ini";
     }
+    SDL_Log("Resource path: %s", g_resourcePath.c_str());
 
     // Initialize settings
     InitSettings(APP_NAME);

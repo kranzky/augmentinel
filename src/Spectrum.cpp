@@ -302,10 +302,10 @@ uint16_t Spectrum::DPoke(uint16_t address, uint16_t value)
 
 void Spectrum::LoadSnapshot(const std::wstring& filename)
 {
-	m_mem = FileContents(L"48.rom");
+	m_mem = FileContents(to_wstring(g_resourcePath) + L"48.rom");
 	m_mem.resize(SPECTRUM_MEM_SIZE);
 
-	auto file = FileContents(filename);
+	auto file = FileContents(to_wstring(g_resourcePath) + filename);
 	std::copy(file.begin() + 27, file.end(), m_mem.begin() + 0x4000);
 
 	Z80_SP = file[23] + (file[24] << 8);
