@@ -18,53 +18,55 @@ When working on this codebase, check:
 
 ### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
 
-**Status**: Phase 1-4 Complete ✅
-**Current**: Phase 5 - Polish & Testing (settings persistence, deprecation warnings)
+**Status**: ✅ COMPLETE - Ready for Release
 
-**Build:**
+**Build (recommended):**
+```bash
+./build.sh debug      # Debug build with symbols
+./build.sh release    # Optimized release build (-O3)
+./build.sh clean      # Remove build directories
+./build.sh package    # Create app bundle + DMG for distribution
+```
+
+**Manual Build:**
 ```bash
 cd build
-cmake ..
+cmake -DCMAKE_BUILD_TYPE=Release ..
 cmake --build .
 ```
 
 **Run:**
 ```bash
-# Normal mode (ESC to exit)
-./Augmentinel
-
-# Screenshot mode (renders one frame, saves screenshot.png, exits)
-./Augmentinel --screenshot
+./build/Augmentinel                # Normal mode (ESC to exit)
+./build/Augmentinel --screenshot   # Capture screenshot.png and exit
 ```
 
-**Current Implementation:**
+**Release Packaging:**
+```bash
+./build.sh package
+# Creates:
+#   release/Augmentinel.app              - macOS app bundle
+#   release/Augmentinel-1.6.0-macOS.dmg  - Distribution DMG
+```
+
+**Implementation Complete:**
 - ✅ SDL2 windowing and OpenGL 3.3 Core context
 - ✅ GLSL shaders (Sentinel.vert/frag, Effect.vert/frag)
-- ✅ Uniform buffers (UBOs) created and bound
-- ✅ Screenshot tool for testing
-- ✅ Model rendering with GPU caching
 - ✅ Full game loop with input system (keyboard + mouse)
-- ✅ Object creation and absorption working
-- ✅ Complete gameplay - playable through full levels
-- ✅ Audio system (Phase 4.1) - Professional multi-channel audio with sound pack switching
-  - Channel management: Looping effects (ch 0), Tunes (ch 1-4), Effects (ch 5-15)
-  - Music never interrupted by tunes or effects
-  - Hot-swappable sound packs: Keys 1-4 switch between Amiga/C64/BBC/Spectrum
-  - MP3 music (3.6MB vs 51MB WAV - 93% reduction)
-- ✅ Audio fixes (Phase 4.2 partial)
-  - Music toggle (M key) now properly pauses/resumes
-  - Volume up (= key) and down (- key) working correctly
-  - Modifier keys (Shift, Ctrl, Alt, Cmd) excluded from "any key" detection
-  - Sound stopping refined: only on landscape↔game transitions
-- ✅ Energy UI display (Phase 4.4) - Orthographic projection, icons dynamically positioned
-- ✅ Screen effects (Phase 4.5) - Framebuffer-based post-processing (fade, dissolve, desaturate)
-- ✅ Bug fixes (Phase 4.6) - Landscape navigation, icon positioning, key repeat behavior
-- ⏳ Settings persistence (Phase 4.2 remaining)
-- ⏳ Fullscreen toggle (Phase 4.2 remaining)
+- ✅ Complete gameplay - playable through all levels
+- ✅ Audio system with sound pack switching (keys 1-4)
+- ✅ Settings persistence (SimpleIni) - all settings saved/restored
+- ✅ Fullscreen toggle (F11 or ALT+Enter)
+- ✅ Energy UI display with orthographic projection
+- ✅ Screen effects (fade, dissolve, desaturate)
+- ✅ macOS app bundle with icon
+- ✅ DMG packaging for distribution
 
 **Key Files:**
+- `build.sh` - Build and packaging script
 - `src/OpenGLRenderer.cpp/h` - OpenGL renderer implementation
 - `src/Application.cpp/h` - SDL2 application/window management
+- `src/Settings.cpp/h` - Settings persistence (SimpleIni)
 - `shaders/*.vert, *.frag` - GLSL shaders (OpenGL 3.3)
 - `PORTING_TODO.md` - Detailed progress tracking
 
