@@ -1313,20 +1313,20 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 **Status:** In Progress
 **Prerequisites:** Phase 4 complete ✅
 
-### 5.1: Fix Deprecation Warnings
+### 5.1: Fix Deprecation Warnings ✅
 
 **Deferred from Phase 1** - Fix codecvt_utf8 warnings in Utils.h
 
-- [ ] Replace deprecated `std::codecvt_utf8` and `std::wstring_convert` in Utils.h
-  - [ ] Option 1: Use platform-specific converters (mbstowcs/wcstombs)
-  - [ ] Option 2: Use C++20 std::format with char8_t (if upgrading to C++20)
-  - [ ] Option 3: Use third-party library (ICU, boost::locale)
-- [ ] Update `to_wstring()` function (line 50-55)
-- [ ] Update `to_string()` function (line 57-62)
-- [ ] Test file I/O still works (loading 48.rom, sentinel.sna, sounds)
-- [ ] Verify clean build with zero warnings
+- [x] Replace deprecated `std::codecvt_utf8` and `std::wstring_convert` in Utils.h ✅
+  - [x] Implemented manual UTF-8 encoding/decoding (no external dependencies)
+  - [x] Removed `<locale>` and `<codecvt>` includes from Platform.h
+- [x] Update `to_wstring()` function ✅
+- [x] Update `to_string()` function ✅
+- [x] Test file I/O still works (loading 48.rom, sentinel.sna, sounds) ✅
+- [x] Verify clean build with zero project warnings ✅
+  - Note: One warning remains in third-party stb_image_write.h (sprintf deprecation)
 
-**Why deferred:** Warnings don't block functionality; focus on critical path (shaders, rendering, gameplay) first.
+**Solution:** Manual UTF-8 encoding/decoding without deprecated standard library functions.
 
 ### 5.2: Full Gameplay Testing
 
