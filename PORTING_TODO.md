@@ -1568,18 +1568,16 @@ These are potential optimizations and improvements identified during code review
 
 ### Medium Priority (Nice to Have)
 
-3. **Spatial Audio Not Implemented (Audio.cpp:174-176)**
-   ```cpp
-   // TODO: Implement 3D spatial audio
-   void Audio::Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos) {
-       Play(filename, type);  // Position ignored
-   }
-   ```
-   - **Solution:** Use `Mix_SetPosition()` and `Mix_SetDistance()` for stereo panning
+3. **Spatial Audio** ✅ IMPLEMENTED
+   - Added `PositionListener()` to track player position and direction
+   - Added `ApplySpatialAudio()` using `Mix_SetPosition()` for stereo panning and distance attenuation
+   - Max hearing distance: 32 units (matches fog distance)
+   - Angle calculation relative to listener's forward direction
 
-4. **PlaySound() Memory Leak (Audio.cpp:199)**
-   - Comment notes: "This leaks the chunk, but it's simple for one-off sounds"
-   - **Solution:** Track chunks in a map for proper cleanup, or use Mix_Chunk pool
+4. **PlaySound() Memory Leak** ✅ FIXED
+   - Added `m_oneOffChunks` map to track dynamically loaded chunks
+   - Added `CleanupFinishedOneOffSounds()` to free chunks after playback
+   - Destructor now properly frees all one-off chunks
 
 5. **Model Cache Memory Growth**
    - `ClearModelCache()` exists but may not be called frequently

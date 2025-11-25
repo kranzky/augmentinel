@@ -313,5 +313,8 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 **Known Issues / Suggested Improvements:**
 - Deprecation warnings from `std::codecvt_utf8` (C++17 deprecated, still functional)
 - Settings don't persist between sessions (stub implementation)
-- Spatial audio not implemented (position parameter ignored)
 - Consider gamepad support for Steam Deck compatibility
+
+**Recent Improvements (2025-11-25):**
+- ✅ Spatial audio implemented (stereo panning + distance attenuation via Mix_SetPosition)
+- ✅ PlaySound() memory leak fixed (one-off chunks now tracked and cleaned up)
