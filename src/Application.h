@@ -38,4 +38,9 @@ private:
     uint32_t m_fpsLastTime{0};
     float m_currentFPS{0.0f};
     float m_avgFrameTime{0.0f};
+
+    // Fullscreen toggle
+    bool m_fullscreen{false};
+    int m_windowedWidth{1600};   // Store windowed size for restore
+    int m_windowedHeight{900};
 };
