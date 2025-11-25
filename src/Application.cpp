@@ -94,6 +94,9 @@ bool Application::Init()
         m_windowedWidth = m_windowWidth;
         m_windowedHeight = m_windowHeight;
         SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        // Ensure window has input focus after going fullscreen
+        SDL_RaiseWindow(m_window);
+        SDL_SetWindowInputFocus(m_window);
         SDL_Log("Restored fullscreen mode from settings");
     }
 
