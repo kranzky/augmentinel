@@ -71,6 +71,35 @@ package_macos() {
     cp -r "$BUILD_DIR/shaders" "$RESOURCES/"
     cp -r "$BUILD_DIR/sounds" "$RESOURCES/"
 
+    # Create app icon from PNG
+    ICON_SOURCE="$PROJECT_DIR/resources/icon.png"
+    if [[ -f "$ICON_SOURCE" ]]; then
+        info "Creating app icon..."
+        ICONSET_DIR="$RELEASE_DIR/AppIcon.iconset"
+        rm -rf "$ICONSET_DIR"
+        mkdir -p "$ICONSET_DIR"
+
+        # Generate all required icon sizes
+        sips -z 16 16     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_16x16.png" > /dev/null
+        sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_16x16@2x.png" > /dev/null
+        sips -z 32 32     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_32x32.png" > /dev/null
+        sips -z 64 64     "$ICON_SOURCE" --out "$ICONSET_DIR/icon_32x32@2x.png" > /dev/null
+        sips -z 128 128   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_128x128.png" > /dev/null
+        sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_128x128@2x.png" > /dev/null
+        sips -z 256 256   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_256x256.png" > /dev/null
+        sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_256x256@2x.png" > /dev/null
+        sips -z 512 512   "$ICON_SOURCE" --out "$ICONSET_DIR/icon_512x512.png" > /dev/null
+        sips -z 1024 1024 "$ICON_SOURCE" --out "$ICONSET_DIR/icon_512x512@2x.png" > /dev/null 2>&1 || \
+            cp "$ICON_SOURCE" "$ICONSET_DIR/icon_512x512@2x.png"  # Use original if can't upscale
+
+        # Convert iconset to icns
+        iconutil -c icns "$ICONSET_DIR" -o "$RESOURCES/AppIcon.icns"
+        rm -rf "$ICONSET_DIR"
+        info "App icon created"
+    else
+        warn "Icon not found at $ICON_SOURCE, skipping icon creation"
+    fi
+
     # Create Info.plist
     cat > "$CONTENTS/Info.plist" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -91,6 +120,8 @@ package_macos() {
     <string>APPL</string>
     <key>CFBundleExecutable</key>
     <string>$APP_NAME</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>
     <string>10.15</string>
     <key>NSHighResolutionCapable</key>
