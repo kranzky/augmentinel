@@ -76,4 +76,14 @@ private:
     fs::path GetSoundPath(const std::wstring& filename);
     Mix_Chunk* LoadSound(const std::wstring& filename);
     int GetChannelForType(AudioType type) const;
+    void ApplySpatialAudio(int channel, XMFLOAT3 soundPos);
+    void CleanupFinishedOneOffSounds();
+
+    // Listener state for spatial audio
+    XMFLOAT3 m_listenerPos{0.0f, 0.0f, 0.0f};
+    XMFLOAT3 m_listenerDir{0.0f, 0.0f, 1.0f};  // Forward direction
+    XMFLOAT3 m_listenerUp{0.0f, 1.0f, 0.0f};   // Up direction
+
+    // One-off sounds that need cleanup after playback
+    std::map<int, Mix_Chunk*> m_oneOffChunks;  // channel -> chunk
 };

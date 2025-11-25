@@ -1,6 +1,7 @@
 #include "Platform.h"
 #include "Audio.h"
 #include "Utils.h"
+#include <cmath>
 
 Audio::Audio() {
     // Initialize SDL audio if not already done
@@ -50,6 +51,14 @@ Audio::~Audio() {
         }
     }
     m_sounds.clear();
+
+    // Free all one-off sounds
+    for (auto& [channel, chunk] : m_oneOffChunks) {
+        if (chunk) {
+            Mix_FreeChunk(chunk);
+        }
+    }
+    m_oneOffChunks.clear();
 
     // Free music
     if (m_music) {
@@ -172,9 +181,54 @@ bool Audio::Play(const std::wstring& filename, AudioType type) {
 }
 
 void Audio::Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos) {
-    // For now, just play without 3D positioning (spatial audio is optional)
-    // TODO: Implement 3D spatial audio with SDL_mixer distance/panning
-    Play(filename, type);
+    if (!m_initialized) return;
+
+    // Handle Music type - should use PlayMusic() instead
+    if (type == AudioType::Music) {
+        SDL_Log("WARNING: AudioType::Music should use PlayMusic(), not Play()");
+        return;
+    }
+
+    Mix_Chunk* chunk = LoadSound(filename);
+    if (!chunk) {
+        return;
+    }
+
+    // Get appropriate channel and loop count for this audio type
+    int channel;
+    int loops;
+
+    switch (type) {
+        case AudioType::Tune:
+            channel = GetChannelForType(type);
+            loops = 0;
+            break;
+
+        case AudioType::LoopingEffect:
+            channel = LOOPING_EFFECT_CHANNEL;
+            loops = -1;
+            break;
+
+        case AudioType::Effect:
+        default:
+            channel = -1;
+            loops = 0;
+            break;
+    }
+
+    // Play the sound
+    int playingChannel = Mix_PlayChannel(channel, chunk, loops);
+    if (playingChannel < 0) {
+        SDL_Log("ERROR: Failed to play sound '%s': %s",
+                to_string(filename).c_str(), Mix_GetError());
+        return;
+    }
+
+    // Set volume
+    Mix_Volume(playingChannel, static_cast<int>(m_soundVolume * MIX_MAX_VOLUME));
+
+    // Apply spatial audio positioning
+    ApplySpatialAudio(playingChannel, pos);
 }
 
 void Audio::Play(const std::wstring& filename) {
@@ -183,6 +237,9 @@ void Audio::Play(const std::wstring& filename) {
 
 void Audio::PlaySound(const fs::path& path, float volume) {
     if (!m_initialized) return;
+
+    // Clean up any finished one-off sounds first
+    CleanupFinishedOneOffSounds();
 
     Mix_Chunk* chunk = Mix_LoadWAV(path.string().c_str());
     if (!chunk) {
@@ -194,10 +251,12 @@ void Audio::PlaySound(const fs::path& path, float volume) {
     int channel = Mix_PlayChannel(-1, chunk, 0);
     if (channel >= 0) {
         Mix_Volume(channel, static_cast<int>(volume * MIX_MAX_VOLUME));
+        // Track this chunk for cleanup when playback finishes
+        m_oneOffChunks[channel] = chunk;
+    } else {
+        // Couldn't play, free the chunk immediately
+        Mix_FreeChunk(chunk);
     }
-
-    // Note: This leaks the chunk, but it's simple for one-off sounds
-    // For production, should track and free after playback
 }
 
 void Audio::PlayMusic(const fs::path& path, bool loop) {
@@ -267,9 +326,73 @@ bool Audio::SetMusicPlaying(bool play) {
 }
 
 void Audio::PositionListener(XMFLOAT3 pos, XMFLOAT3 dir, XMFLOAT3 up) {
-    // Spatial audio is optional for Phase 4.1
-    // Could implement with Mix_SetPosition, Mix_SetDistance, etc.
-    // For now, just a stub
+    m_listenerPos = pos;
+    m_listenerDir = dir;
+    m_listenerUp = up;
+}
+
+void Audio::ApplySpatialAudio(int channel, XMFLOAT3 soundPos) {
+    if (channel < 0) return;
+
+    // Calculate vector from listener to sound
+    float dx = soundPos.x - m_listenerPos.x;
+    float dy = soundPos.y - m_listenerPos.y;
+    float dz = soundPos.z - m_listenerPos.z;
+
+    // Calculate distance
+    float distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+
+    // Distance attenuation (0-255 for SDL_mixer)
+    // Max hearing distance is about 32 units (matches game fog distance)
+    constexpr float MAX_DISTANCE = 32.0f;
+    constexpr float MIN_DISTANCE = 1.0f;  // No attenuation within this distance
+
+    Uint8 sdlDistance = 0;  // 0 = closest (loudest)
+    if (distance > MIN_DISTANCE) {
+        float normalizedDist = std::min((distance - MIN_DISTANCE) / (MAX_DISTANCE - MIN_DISTANCE), 1.0f);
+        sdlDistance = static_cast<Uint8>(normalizedDist * 255);
+    }
+
+    // Calculate angle from listener's forward direction to sound
+    // We need to project onto the XZ plane (horizontal) for stereo panning
+    float listenerAngle = std::atan2(m_listenerDir.x, m_listenerDir.z);  // Listener facing direction
+    float soundAngle = std::atan2(dx, dz);  // Direction to sound
+
+    // Relative angle (0 = front, 90 = right, 180 = behind, 270 = left)
+    float relativeAngle = soundAngle - listenerAngle;
+
+    // Normalize to 0-360 degrees
+    float angleDegrees = XMConvertToDegrees(relativeAngle);
+    while (angleDegrees < 0) angleDegrees += 360.0f;
+    while (angleDegrees >= 360) angleDegrees -= 360.0f;
+
+    // SDL_mixer uses 0-360 degrees: 0=front, 90=right, 180=behind, 270=left
+    Sint16 sdlAngle = static_cast<Sint16>(angleDegrees);
+
+    // Apply position effect
+    if (!Mix_SetPosition(channel, sdlAngle, sdlDistance)) {
+        // SetPosition failed, but that's not critical
+        // Sound will play without spatial positioning
+    }
+}
+
+void Audio::CleanupFinishedOneOffSounds() {
+    // Iterate through tracked one-off sounds and free finished ones
+    for (auto it = m_oneOffChunks.begin(); it != m_oneOffChunks.end(); ) {
+        int channel = it->first;
+        Mix_Chunk* chunk = it->second;
+
+        // Check if this channel is still playing
+        if (!Mix_Playing(channel)) {
+            // Channel finished, free the chunk
+            if (chunk) {
+                Mix_FreeChunk(chunk);
+            }
+            it = m_oneOffChunks.erase(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 int Audio::GetChannelForType(AudioType type) const {
