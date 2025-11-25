@@ -1094,7 +1094,6 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 - [x] Stop playing sounds and tunes on a state change ✅
   - [x] Added `Stop(AudioType::Tune)` and `Stop(AudioType::LoopingEffect)` to `ChangeState()`
   - [x] Music continues across state changes, one-shot effects allowed to finish
-- [ ] Implement full-screen toggle (with keybinding F11 or whatever makes the most sense)
 - [x] Don't include modifier keys as any keys (ALT-TAB, screenshots, etc.) ✅
   - [x] Added VK_ mappings for SHIFT, CTRL, ALT, GUI (Command) keys in Platform.h
   - [x] Modified VK_ANY handling in `View::InputAction()` to exclude modifier keys
