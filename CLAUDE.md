@@ -18,8 +18,8 @@ When working on this codebase, check:
 
 ### SDL2 + OpenGL Port (macOS/Linux) - **CURRENT DEVELOPMENT**
 
-**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅, Phase 4 Complete ✅
-**Current**: Phase 5 - Effects & Polish
+**Status**: Phase 1-4 Complete ✅
+**Current**: Phase 5 - Polish & Testing (settings persistence, deprecation warnings)
 
 **Build:**
 ```bash
@@ -51,11 +51,16 @@ cmake --build .
   - Music never interrupted by tunes or effects
   - Hot-swappable sound packs: Keys 1-4 switch between Amiga/C64/BBC/Spectrum
   - MP3 music (3.6MB vs 51MB WAV - 93% reduction)
+- ✅ Audio fixes (Phase 4.2 partial)
+  - Music toggle (M key) now properly pauses/resumes
+  - Volume up (= key) and down (- key) working correctly
+  - Modifier keys (Shift, Ctrl, Alt, Cmd) excluded from "any key" detection
+  - Sound stopping refined: only on landscape↔game transitions
 - ✅ Energy UI display (Phase 4.4) - Orthographic projection, icons dynamically positioned
 - ✅ Screen effects (Phase 4.5) - Framebuffer-based post-processing (fade, dissolve, desaturate)
 - ✅ Bug fixes (Phase 4.6) - Landscape navigation, icon positioning, key repeat behavior
-- ⏳ Settings persistence (Phase 4.2)
-- ⏳ Game state testing (Phase 4.3)
+- ⏳ Settings persistence (Phase 4.2 remaining)
+- ⏳ Fullscreen toggle (Phase 4.2 remaining)
 
 **Key Files:**
 - `src/OpenGLRenderer.cpp/h` - OpenGL renderer implementation
@@ -273,10 +278,15 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
   - Sound pack switching: Keys 1-4 for Amiga/C64/BBC/Spectrum with hot-reload
   - MP3 music format (93% disk space savings)
   - Music starts at landscape select (not on startup)
+- ✅ Phase 4.2 (partial): Audio & Input fixes
+  - Music toggle uses pause/resume (not halt) for proper re-enable
+  - Volume up key fixed (= key instead of + which requires shift)
+  - Modifier keys excluded from VK_ANY (allows ALT-TAB, screenshots)
+  - State change sound stopping refined (only landscape↔game transitions)
 - ✅ Phase 4.4: Energy UI display (orthographic projection, dynamic positioning)
 - ✅ Phase 4.5: Screen effects & transitions (framebuffer post-processing)
 - ✅ Phase 4.6: Bug fixes (landscape navigation, icon positioning, key repeat)
-- ⏳ Phase 4.2: Settings persistence (deferred to Phase 5)
+- ⏳ Phase 4.2 (remaining): Settings persistence, fullscreen toggle
 - ⏳ Phase 4.3: Game state testing (deferred to Phase 5)
 
 **Important Notes for Phase 4.4 (Energy Icons):**
@@ -293,5 +303,15 @@ See `PORTING_TODO.md` for detailed checklist. Summary:
 - symbol_idx values: 0=empty, 1=robot(blue), 2=tree(green), 4=boulder(cyan), 6=gold robot(yellow)
 
 **Future Phases:**
-- Phase 5: Polish & testing (deprecation warnings, settings persistence, game state testing)
+- Phase 5: Polish & testing
+  - Fix deprecation warnings (codecvt_utf8 in Utils.h)
+  - Settings persistence (SimpleIni integration)
+  - Fullscreen toggle (F11)
+  - Comprehensive gameplay testing
 - Phase 6: Final verification & documentation
+
+**Known Issues / Suggested Improvements:**
+- Deprecation warnings from `std::codecvt_utf8` (C++17 deprecated, still functional)
+- Settings don't persist between sessions (stub implementation)
+- Spatial audio not implemented (position parameter ignored)
+- Consider gamepad support for Steam Deck compatibility
