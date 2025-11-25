@@ -85,7 +85,7 @@ using namespace DirectX;
 #define VK_NEXT       SDLK_PAGEDOWN
 #define VK_SPACE      SDLK_SPACE
 #define VK_PAUSE      SDLK_PAUSE
-#define VK_OEM_PLUS   SDLK_PLUS
+#define VK_OEM_PLUS   SDLK_EQUALS   // = key (+ requires shift, but we want unshifted)
 #define VK_OEM_MINUS  SDLK_MINUS
 
 // Letter keys (action bindings use uppercase, SDL uses lowercase keycodes)

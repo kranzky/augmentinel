@@ -1360,13 +1360,23 @@ std::vector<Model> Augmentinel::GetModelStack(int tile_x, int tile_z)
 
 void Augmentinel::ChangeState(GameState new_state)
 {
+	auto old_state = m_state;
 	m_state = new_state;
 	m_substate = 0;
 
-	// Stop all sounds and tunes when changing state (music continues)
-	// This prevents lingering sound effects and jingles during transitions
-	m_pAudio->Stop(AudioType::Tune);
-	m_pAudio->Stop(AudioType::LoopingEffect);
+	// Stop tunes and looping sounds only when transitioning between
+	// landscape select and game (either direction). This prevents sounds
+	// from the previous context bleeding through, while allowing sounds
+	// to continue during other transitions (title->landscape, u-turn, etc.)
+	bool entering_game = (old_state == GameState::LandscapePreview && new_state == GameState::Game);
+	bool leaving_game = (old_state == GameState::Game && new_state == GameState::LandscapePreview);
+	bool leaving_to_reset = (old_state == GameState::Game && new_state == GameState::Reset);
+
+	if (entering_game || leaving_game || leaving_to_reset)
+	{
+		m_pAudio->Stop(AudioType::Tune);
+		m_pAudio->Stop(AudioType::LoopingEffect);
+	}
 	// Note: We don't stop AudioType::Effect as they are short one-shots
 	// Note: We don't stop AudioType::Music - music continues across states
 
