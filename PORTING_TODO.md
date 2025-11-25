@@ -1434,7 +1434,60 @@ Full 3D rendering pipeline operational with camera, projection, and shaders!
 **Game Features:** Complete (rendering, input, audio, effects, UI, settings) ✅
 **Known Issues:** None (all deprecation warnings fixed)
 **Performance:** ~60 FPS stable ✅
-**Release:** macOS app bundle and DMG ready for distribution
+**Release:** macOS v1.6.0 published to itch.io ✅
+
+---
+
+## Next Session: Windows Build & Release
+
+### Prerequisites to Install on Windows
+
+1. **Visual Studio 2019+** with C++ desktop development workload
+2. **CMake 3.15+** (can install via Visual Studio or standalone)
+3. **vcpkg** package manager:
+   ```cmd
+   git clone https://github.com/Microsoft/vcpkg.git
+   cd vcpkg
+   .\bootstrap-vcpkg.bat
+   .\vcpkg integrate install
+   ```
+4. **Set VCPKG_ROOT environment variable** to vcpkg installation path
+
+5. **Install dependencies via vcpkg:**
+   ```cmd
+   vcpkg install sdl2:x64-windows sdl2-mixer:x64-windows sdl2-ttf:x64-windows glew:x64-windows
+   ```
+
+### Build & Test Steps
+
+1. **Clone/pull the repo** and ensure you're on main branch with v1.6.0 tag
+2. **Build:**
+   ```cmd
+   build.bat release
+   ```
+3. **Test the game** - run `build\Release\Augmentinel.exe`
+4. **Package:**
+   ```cmd
+   build.bat package
+   ```
+5. **Verify package** in `release\Augmentinel-1.6.0-windows\`
+
+### Push to itch.io
+
+```cmd
+butler push release\Augmentinel-1.6.0-windows kranzky/augmentinel:windows --userversion 1.6.0
+```
+
+### itch.io Details
+- **Username:** kranzky
+- **Project:** augmentinel
+- **macOS channel:** mac (already published v1.6.0)
+- **Windows channel:** windows (to be published)
+- **itch.io URL:** https://kranzky.itch.io/augmentinel
+
+### Git Status
+- Tag `v1.6.0` created locally (not yet pushed to origin)
+- To push tag: `git push origin v1.6.0`
 
 ---
 
