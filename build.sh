@@ -135,6 +135,12 @@ EOF
     # Create PkgInfo
     echo -n "APPL????" > "$CONTENTS/PkgInfo"
 
+    # Ad-hoc code sign the app bundle
+    # This prevents the "app is damaged" error for users who download directly
+    info "Code signing app bundle (ad-hoc)..."
+    codesign --force --deep --sign - "$APP_BUNDLE"
+    info "Code signing complete"
+
     info "App bundle created: $APP_BUNDLE"
 
     # Create DMG for distribution (optional)
