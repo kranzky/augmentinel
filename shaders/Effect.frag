@@ -11,7 +11,9 @@ layout(std140) uniform PixelConstants
     float view_dissolve;    // 0.0 = normal, 1.0 = dissolved (view effect)
     float view_desaturate;  // 0.0 = colour, 1.0 = greyscale (view effect)
     float view_fade;        // 0.0 = normal, 1.0 = black (view effect)
-    float padding[3];
+    float _pad0;
+    float _pad1;
+    float _pad2;
 };
 
 // Input from vertex shader

@@ -8,7 +8,9 @@ layout(std140) uniform PixelConstants
     float view_dissolve;
     float view_desaturate;
     float view_fade;
-    float padding[3];
+    float _pad0;
+    float _pad1;
+    float _pad2;
 };
 
 // Inputs from vertex shader

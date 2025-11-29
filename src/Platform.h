@@ -1,7 +1,8 @@
 #pragma once
 
 // DirectXMath configuration - MUST be before including DirectXMath
-#ifdef __APPLE__
+// Required for macOS and MinGW (non-MSVC compilers)
+#if defined(__APPLE__) || (defined(__GNUC__) && !defined(_MSC_VER))
     #ifndef _XM_NO_INTRINSICS_
         #define _XM_NO_INTRINSICS_
     #endif
@@ -14,8 +15,12 @@
 #endif
 
 // Platform detection
-#if defined(_WIN32)
-    #define PLATFORM_WINDOWS
+// Note: PLATFORM_WINDOWS is defined by CMake for MSVC builds (Win32 API)
+// For MinGW/SDL2 builds on Windows, PLATFORM_WINDOWS is NOT defined
+#if defined(_WIN32) && defined(_MSC_VER)
+    #ifndef PLATFORM_WINDOWS
+        #define PLATFORM_WINDOWS
+    #endif
 #elif defined(__APPLE__)
     #ifndef PLATFORM_MACOS
         #define PLATFORM_MACOS
@@ -37,13 +42,13 @@
 #include <functional>
 #include <sstream>
 #include <iomanip>
+// Filesystem support
 #include <filesystem>
+namespace fs = std::filesystem;
 #include <cstdint>
 #include <cassert>
 #include <algorithm>
 #include <random>
-
-namespace fs = std::filesystem;
 
 // SDL2
 #include <SDL2/SDL.h>

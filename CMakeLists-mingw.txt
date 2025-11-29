@@ -1,0 +1,218 @@
+cmake_minimum_required(VERSION 3.15)
+project(Augmentinel VERSION 1.6.0)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Default to Release build if not specified
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+# GCC/MinGW flags
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
+
+# Platform definitions for Windows
+# Note: We DON'T define PLATFORM_WINDOWS for MinGW because that's used for Win32 API code
+# Instead, the code uses _WIN32 for basic Windows detection and PLATFORM_WINDOWS for Win32 API
+add_definitions(-DWIN32 -D_CRT_SECURE_NO_WARNINGS)
+
+# Paths to local libraries
+set(SDL2_ROOT "C:/Users/kranzky/dev/SDL2/i686-w64-mingw32")
+set(GLEW_ROOT "C:/Users/kranzky/dev/glew")
+
+# Verify SDL2 exists
+if(NOT EXISTS "${SDL2_ROOT}/include/SDL2/SDL.h")
+    message(FATAL_ERROR "SDL2 not found at ${SDL2_ROOT}. Run setup-mingw.bat first.")
+endif()
+
+# Check for SDL2_mixer
+if(NOT EXISTS "${SDL2_ROOT}/include/SDL2/SDL_mixer.h")
+    message(FATAL_ERROR "SDL2_mixer not found. Run setup-mingw.bat to download it.")
+endif()
+
+# Check for SDL2_ttf
+if(NOT EXISTS "${SDL2_ROOT}/include/SDL2/SDL_ttf.h")
+    message(FATAL_ERROR "SDL2_ttf not found. Run setup-mingw.bat to download it.")
+endif()
+
+# Check for GLEW
+if(NOT EXISTS "${GLEW_ROOT}/include/GL/glew.h")
+    message(FATAL_ERROR "GLEW not found at ${GLEW_ROOT}. Run setup-mingw.bat first.")
+endif()
+
+# DirectXMath (cross-platform math library)
+include(FetchContent)
+FetchContent_Declare(
+    directxmath
+    GIT_REPOSITORY https://github.com/microsoft/DirectXMath.git
+    GIT_TAG dec2022
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(directxmath)
+
+# Create stub sal.h for DirectXMath (non-MSVC compatibility)
+file(WRITE ${directxmath_SOURCE_DIR}/Inc/sal.h
+"#pragma once
+// Stub SAL annotations for non-MSVC platforms
+#define _In_
+#define _Out_
+#define _Inout_
+#define _In_opt_
+#define _Out_opt_
+#define _Inout_opt_
+#define _In_z_
+#define _Out_z_
+#define _Inout_z_
+#define _In_reads_(s)
+#define _Out_writes_(s)
+#define _Inout_updates_(s)
+#define _In_reads_bytes_(s)
+#define _Out_writes_bytes_(s)
+#define _Inout_updates_bytes_(s)
+#define _In_reads_opt_(s)
+#define _Out_writes_opt_(s)
+#define _Inout_updates_opt_(s)
+#define _Out_writes_to_(s,c)
+#define _Out_writes_all_(s)
+#define _Inout_updates_to_(s,c)
+#define _In_reads_to_(s,c)
+#define _Ret_
+#define _Ret_opt_
+#define _Ret_z_
+#define _Check_return_
+#define _Must_inspect_result_
+#define _Success_(expr)
+#define _Return_type_success_(expr)
+#define _Always_(expr)
+#define _On_failure_(expr)
+#define _Post_
+#define _Pre_
+#define _Null_
+#define _Notnull_
+#define _Maybenull_
+#define _Valid_
+#define _Notvalid_
+#define _Readable_bytes_(size)
+#define _Readable_elements_(size)
+#define _Writable_bytes_(size)
+#define _Writable_elements_(size)
+#define _Use_decl_annotations_
+#define _Analysis_assume_(expr)
+")
+
+# Source files
+set(SOURCES
+    src/main.cpp
+    src/Application.cpp
+    src/OpenGLRenderer.cpp
+    src/DebugOverlay.cpp
+    src/View.cpp
+    src/Augmentinel.cpp
+    src/Spectrum.cpp
+    src/Model.cpp
+    src/Camera.cpp
+    src/Animate.cpp
+    src/Audio.cpp
+    src/Settings.cpp
+    src/Utils.cpp
+    z80/Z80.c
+)
+
+set(HEADERS
+    src/Platform.h
+    src/Application.h
+    src/OpenGLRenderer.h
+    src/DebugOverlay.h
+    src/Augmentinel.h
+    src/Spectrum.h
+    src/Model.h
+    src/Camera.h
+    src/Animate.h
+    src/Audio.h
+    src/Settings.h
+    src/Utils.h
+    src/Game.h
+    src/Sentinel.h
+    src/Vertex.h
+    src/Action.h
+    src/SimpleHeap.h
+    src/SharedConstants.h
+    z80/Z80.h
+    z80/Z80-support.h
+)
+
+# Create executable (GUI application, not console)
+add_executable(Augmentinel WIN32 ${SOURCES} ${HEADERS})
+
+# Include directories
+target_include_directories(Augmentinel PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/z80
+    ${SDL2_ROOT}/include/SDL2
+    ${SDL2_ROOT}/include
+    ${GLEW_ROOT}/include
+    ${directxmath_SOURCE_DIR}/Inc
+)
+
+# Link libraries - order matters for MinGW!
+target_link_libraries(Augmentinel
+    -L${SDL2_ROOT}/lib
+    -L${GLEW_ROOT}/lib/Release/Win32
+    -lmingw32
+    -lSDL2main
+    -lSDL2
+    -lSDL2_mixer
+    -lSDL2_ttf
+    -lglew32
+    -lopengl32
+    -lglu32
+    -lstdc++fs
+    -mwindows
+)
+
+# Compile definitions
+# Don't define PLATFORM_WINDOWS - that's for Win32 API code in MSVC builds
+# Platform.h will detect _WIN32 but not enable Win32 API paths
+target_compile_definitions(Augmentinel PRIVATE
+    GLEW_STATIC
+    _XM_NO_INTRINSICS_
+    CPU_Z80_DEPENDENCIES_H="Z80-support.h"
+    CPU_Z80_USE_LOCAL_HEADER
+)
+
+# Copy resources to build directory
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/48.rom
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sentinel.sna
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+# Copy sounds directory if it exists
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sounds)
+    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sounds
+         DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+# Copy shaders directory
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+# Copy required DLLs to build directory
+file(GLOB SDL2_DLLS "${SDL2_ROOT}/bin/*.dll")
+file(COPY ${SDL2_DLLS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+# Copy GLEW DLL
+if(EXISTS "${GLEW_ROOT}/bin/Release/Win32/glew32.dll")
+    file(COPY "${GLEW_ROOT}/bin/Release/Win32/glew32.dll"
+         DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+endif()
+
+# Print configuration info
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "SDL2 root: ${SDL2_ROOT}")
+message(STATUS "GLEW root: ${GLEW_ROOT}")
+message(STATUS "DirectXMath: ${directxmath_SOURCE_DIR}")
