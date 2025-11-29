@@ -9,7 +9,7 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$PROJECT_DIR/build"
 RELEASE_DIR="$PROJECT_DIR/release"
 APP_NAME="Augmentinel"
-VERSION="1.6.0"
+VERSION="1.6.2"
 
 # Colors for output
 RED='\033[0;31m'
@@ -46,6 +46,85 @@ clean() {
     info "Clean complete"
 }
 
+# Recursively bundle dylibs into the Frameworks directory
+# Usage: bundle_dylibs <binary_path> <frameworks_dir>
+bundle_dylibs() {
+    local BINARY="$1"
+    local FRAMEWORKS_DIR="$2"
+    local PROCESSED_FILE="$FRAMEWORKS_DIR/.processed"
+
+    # Create processed file to track what we've already handled
+    touch "$PROCESSED_FILE"
+
+    # Process the binary
+    process_binary "$BINARY" "$FRAMEWORKS_DIR" "$PROCESSED_FILE"
+
+    # Process all dylibs in frameworks directory until no new ones are added
+    local CHANGED=1
+    while [[ $CHANGED -eq 1 ]]; do
+        CHANGED=0
+        for dylib in "$FRAMEWORKS_DIR"/*.dylib; do
+            [[ -f "$dylib" ]] || continue
+            if ! grep -q "$(basename "$dylib")" "$PROCESSED_FILE" 2>/dev/null; then
+                echo "$(basename "$dylib")" >> "$PROCESSED_FILE"
+                process_binary "$dylib" "$FRAMEWORKS_DIR" "$PROCESSED_FILE"
+                CHANGED=1
+            fi
+        done
+    done
+
+    rm -f "$PROCESSED_FILE"
+}
+
+# Process a single binary, copying its dylib dependencies
+process_binary() {
+    local BINARY="$1"
+    local FRAMEWORKS_DIR="$2"
+    local PROCESSED_FILE="$3"
+
+    # Get all dylib dependencies
+    local DEPS=$(otool -L "$BINARY" | grep -E '^\s+/' | awk '{print $1}')
+
+    for dep in $DEPS; do
+        # Skip system libraries
+        if [[ "$dep" == /System/* ]] || [[ "$dep" == /usr/lib/* ]]; then
+            continue
+        fi
+
+        # Skip if it's the binary's own ID
+        if [[ "$dep" == "$BINARY" ]]; then
+            continue
+        fi
+
+        # Skip @executable_path and @loader_path (already processed)
+        if [[ "$dep" == @* ]]; then
+            continue
+        fi
+
+        local DYLIB_NAME=$(basename "$dep")
+        local DEST_PATH="$FRAMEWORKS_DIR/$DYLIB_NAME"
+
+        # Copy dylib if not already in frameworks
+        if [[ ! -f "$DEST_PATH" ]]; then
+            info "  Copying $DYLIB_NAME"
+            cp "$dep" "$DEST_PATH"
+            chmod 755 "$DEST_PATH"
+
+            # Update the dylib's ID
+            install_name_tool -id "@loader_path/../Frameworks/$DYLIB_NAME" "$DEST_PATH" 2>/dev/null || true
+        fi
+
+        # Update the reference in the binary
+        if [[ "$(dirname "$BINARY")" == *"MacOS" ]]; then
+            # Executable uses @executable_path
+            install_name_tool -change "$dep" "@executable_path/../Frameworks/$DYLIB_NAME" "$BINARY" 2>/dev/null || true
+        else
+            # Dylibs use @loader_path
+            install_name_tool -change "$dep" "@loader_path/$DYLIB_NAME" "$BINARY" 2>/dev/null || true
+        fi
+    done
+}
+
 package_macos() {
     info "Creating macOS app bundle..."
 
@@ -57,13 +136,19 @@ package_macos() {
     CONTENTS="$APP_BUNDLE/Contents"
     MACOS="$CONTENTS/MacOS"
     RESOURCES="$CONTENTS/Resources"
+    FRAMEWORKS="$CONTENTS/Frameworks"
 
     rm -rf "$APP_BUNDLE"
     mkdir -p "$MACOS"
     mkdir -p "$RESOURCES"
+    mkdir -p "$FRAMEWORKS"
 
     # Copy executable
     cp "$BUILD_DIR/$APP_NAME" "$MACOS/"
+
+    # Bundle all dylib dependencies
+    info "Bundling dynamic libraries..."
+    bundle_dylibs "$MACOS/$APP_NAME" "$FRAMEWORKS"
 
     # Copy resources
     cp "$BUILD_DIR/48.rom" "$RESOURCES/"
