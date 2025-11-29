@@ -71,7 +71,7 @@ using namespace DirectX;
 
 // App constants
 #define APP_NAME "Augmentinel"
-#define APP_VERSION "v1.6.0-SDL2"
+#define APP_VERSION "v1.6.1"
 
 // SDL keycode mappings for non-Windows platforms
 #ifndef PLATFORM_WINDOWS
