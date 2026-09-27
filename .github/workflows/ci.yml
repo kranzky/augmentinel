@@ -114,7 +114,7 @@ jobs:
 
       - name: Upload smoke screenshot
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: smoke-${{ matrix.os }}
           path: ${{ runner.temp }}/smoke/smoke.png
@@ -227,7 +227,7 @@ jobs:
 
       - name: Upload (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: Augmentinel-windows-x64
           path: dist/Augmentinel-windows-x64/
@@ -235,7 +235,7 @@ jobs:
 
       - name: Upload (macOS)
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: Augmentinel-macos
           path: dist/Augmentinel-macos.zip
@@ -273,7 +273,7 @@ jobs:
 
       - name: Download Windows build
         if: env.BUTLER_API_KEY != ''
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           name: Augmentinel-windows-x64
           path: dist/windows
