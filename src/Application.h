@@ -1,46 +1,58 @@
 #pragma once
 #include "Platform.h"
 #include "Game.h"
-#include "Audio.h"
-#include "View.h"
-#include "DebugOverlay.h"
 
-class Application {
+class Audio;
+class DebugOverlay;
+class OpenGLRenderer;
+
+class Application
+{
 public:
     Application();
     ~Application();
+    Application(const Application&) = delete;
+    Application& operator=(const Application&) = delete;
 
     bool Init();
-    void Run(bool dumpScreenshot = false);
-    void Shutdown();
+
+    // Scripted input and capture for automated smoke tests.
+    struct Script
+    {
+        fs::path screenshot_path;                 // save the last frame here, then exit
+        int frames{ 10 };                         // frames to run before the screenshot
+        std::vector<std::pair<int, SDL_Keycode>> presses;  // taps: frame number, key
+    };
+
+    // Run until quit, or until the script's screenshot is taken. Returns false if
+    // the screenshot couldn't be saved.
+    bool Run(const Script& script);
 
 private:
+    void InitPaths();
     void ProcessEvent(const SDL_Event& event);
-    void ProcessKeyEvent(const SDL_KeyboardEvent& key, bool pressed);
-    void ProcessMouseButton(const SDL_MouseButtonEvent& button, bool pressed);
+    void ProcessKeyEvent(const SDL_KeyboardEvent& key);
+    void ToggleFullscreen();
+    void OnResize();
+    void UpdateDebugOverlay(float elapsed);
+    bool SaveScreenshot(const fs::path& path) const;
 
-    SDL_Window* m_window{nullptr};
-    SDL_GLContext m_glContext{nullptr};
+    SDL_Window* m_window{ nullptr };
+    SDL_GLContext m_glContext{ nullptr };
 
-    std::shared_ptr<View> m_pRenderer;
+    std::shared_ptr<OpenGLRenderer> m_pRenderer;
     std::shared_ptr<Audio> m_pAudio;
     std::unique_ptr<Game> m_pGame;
     std::unique_ptr<DebugOverlay> m_pDebugOverlay;
 
-    bool m_running{true};
-    int m_windowWidth{1600};
-    int m_windowHeight{900};
+    int m_drawableWidth{ 0 };
+    int m_drawableHeight{ 0 };
+    bool m_running{ true };
+    bool m_fullscreen{ false };
 
-    // Performance debugging
-    bool m_showDebugInfo{false};
-    uint32_t m_frameCount{0};
-    uint32_t m_fpsFrameCount{0};
-    uint32_t m_fpsLastTime{0};
-    float m_currentFPS{0.0f};
-    float m_avgFrameTime{0.0f};
-
-    // Fullscreen toggle
-    bool m_fullscreen{false};
-    int m_windowedWidth{1600};   // Store windowed size for restore
-    int m_windowedHeight{900};
+    bool m_showDebugInfo{ false };
+    uint32_t m_frameCount{ 0 };
+    uint32_t m_fpsFrameCount{ 0 };
+    uint32_t m_fpsLastTicks{ 0 };
+    float m_fps{ 0.0f };
 };

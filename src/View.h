@@ -35,7 +35,7 @@ struct VertexConstants
 	XMMATRIX WVP{};
 	XMMATRIX W{};
 	std::array<XMFLOAT4, PALETTE_SIZE> Palette{};
-	XMFLOAT3 EyePos;
+	XMFLOAT3 EyePos{};
 	float z_fade{};
 	float fog_density{};
 	uint32_t fog_colour_idx{};
@@ -51,7 +51,7 @@ struct PixelConstants
 	float view_dissolve{ 0.0f };	// 0.0f = normal, 1.0f = dissolved
 	float view_desaturate{ 0.0f };	// 0.0f = colour, 1.0f = greysale
 	float view_fade{ 0.0f };		// 0.0f = normal, 1.0f = black
-	float padding[3];
+	float padding[3]{};
 };
 static_assert((sizeof(PixelConstants) & 0xf) == 0, "PS constants size must be multiple of 16");
 
@@ -117,10 +117,8 @@ public:
 	void EnableFreeLook(bool enable);
 	virtual void MouseMove(int x, int y);
 	void UpdateKey(int virtKey, KeyState state);
-	KeyState GetKeyState(int key);
-	bool AnyKeyPressed();
 	void ProcessDebugKeys();
-	void ProcessKeyEdges();
+	void EndInputFrame();
 	void ReleaseKeys();
 
 protected:
@@ -191,15 +189,13 @@ protected:
 	bool m_noise_enabled{ true };
 	float m_fRandom{};
 
+	// Keys with a pending or held press (absent keys are Up). DownEdge is a press no
+	// action has consumed yet, Down a held key whose press was consumed, and UpEdge
+	// a key released before its press was consumed (a tap within one frame).
 	std::map<int, KeyState> m_keys;
 	std::map<Action, std::vector<int>> m_key_bindings;
 
-	// Transition state tracking (Phase 4.5 fix)
-	struct TransitionState {
-		float start_value;
-		float target_value;
-		float elapsed_time;
-		float total_time;
-	};
-	std::map<ViewEffect, TransitionState> m_transitions;
+	bool ConsumeKeyPress(int key);
+	bool IsKeyActive(int key) const;
+	bool ConsumeAnyKeyPress();
 };

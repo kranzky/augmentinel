@@ -9,7 +9,7 @@ enum class AnimationType
 struct Animation
 {
 	Animation(AnimationType type_, int id_, float duration_, float start_value_, float end_value_, bool interruptable_ = false)
-		: type(type_), id(id_), elapsed_time(0.0f), total_time(duration_), start_value(start_value_), end_value(end_value_), interruptible(interruptable_) {}
+		: type(type_), elapsed_time(0.0f), total_time(duration_), id(id_), start_value(start_value_), end_value(end_value_), interruptible(interruptable_) {}
 
 	AnimationType type;
 	float elapsed_time;

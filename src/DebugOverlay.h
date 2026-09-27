@@ -1,40 +1,30 @@
 #pragma once
 #include "Platform.h"
-#include <SDL2/SDL_ttf.h>
-#include <string>
-#include <vector>
+#include "GL.h"
 
-class DebugOverlay {
+// Performance stats drawn over the game (toggled with TAB), using the Spectrum
+// ROM's own 8x8 character set.
+class DebugOverlay
+{
 public:
-    DebugOverlay();
+    DebugOverlay() = default;
     ~DebugOverlay();
+    DebugOverlay(const DebugOverlay&) = delete;
+    DebugOverlay& operator=(const DebugOverlay&) = delete;
 
-    bool Init(int windowWidth, int windowHeight);
+    bool Init(const fs::path& rom_path);
     void SetText(const std::vector<std::string>& lines);
-    void Render();
-    void OnResize(int windowWidth, int windowHeight);
+    void Render(int width, int height);
 
 private:
-    struct TextLine {
-        GLuint texture{0};
-        int width{0};
-        int height{0};
-        std::string text;
-    };
+    std::array<uint8_t, 96 * 8> m_font{};  // characters 0x20 to 0x7f
+    std::vector<std::string> m_lines;
+    int m_textureWidth{ 0 };
+    int m_textureHeight{ 0 };
+    bool m_dirty{ false };
 
-    void UpdateTexture(TextLine& line, const std::string& text);
-    void RenderQuad(float x, float y, float width, float height, GLuint texture);
-
-    TTF_Font* m_font{nullptr};
-    std::vector<TextLine> m_lines;
-    int m_windowWidth{0};
-    int m_windowHeight{0};
-
-    // OpenGL resources for overlay rendering
-    GLuint m_overlayProgram{0};
-    GLuint m_overlayVAO{0};
-    GLuint m_overlayVBO{0};
-
-    SDL_Color m_textColor{255, 255, 0, 255};  // Yellow text
-    SDL_Color m_bgColor{0, 0, 0, 200};        // Semi-transparent black background
+    GLuint m_program{ 0 };
+    GLuint m_vao{ 0 };
+    GLuint m_texture{ 0 };
+    GLint m_rectLocation{ -1 };
 };

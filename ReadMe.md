@@ -29,154 +29,33 @@ For more details see: https://simonowen.com/spectrum/augmentinel/
 
 ## Building
 
-### Windows (Original)
+### macOS, Windows and Linux (SDL2 + OpenGL)
 
-Building the Windows version requires Visual Studio 2019 or later.
-
-The Windows code uses the Win32 and D3D11 APIs.
-
-### macOS/Linux (SDL2 + OpenGL Port) 🚧 In Progress
-
-A cross-platform port using SDL2 and OpenGL is currently in development.
-
-**Status**: Phase 1 Complete ✅, Phase 2 Complete ✅, Phase 3 Complete ✅ 🎉
-
-**Current Phase**: Phase 4 - Polish & Remaining Features
-
-**Recent Milestones**:
-- ✅ SDL2 + OpenGL 3.3 build system working
-- ✅ HLSL shaders converted to GLSL (Sentinel & Effect)
-- ✅ Shader programs compiled and linked successfully
-- ✅ Uniform buffers (UBOs) created and updating correctly
-- ✅ Test triangle renders with perspective projection
-- ✅ Camera system operational (view + projection matrices)
-- ✅ Full 3D rendering pipeline functional
-- ✅ Screenshot tool for automated testing (`--screenshot`)
-- ✅ Model rendering with GPU caching (vertex buffer pointer keys)
-- ✅ Full keyboard and mouse input system (SDL2)
-- ✅ Object creation and absorption working correctly
-- ✅ Complete gameplay - playable through full levels!
-- ✅ Performance: ~60 FPS with efficient geometry sharing
-
-**Next**: Phase 4 - Audio system, settings persistence, energy UI, screen effects
-
-#### Prerequisites
-
-**macOS:**
-```bash
-# Install Homebrew if not already installed
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install dependencies
-brew install cmake sdl2 sdl2_mixer
-```
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt update
-sudo apt install build-essential cmake libsdl2-dev libsdl2-mixer-dev
-```
-
-#### Build Instructions
+This fork ports Augmentinel to SDL2 and OpenGL 3.3 for macOS and Windows. You need
+CMake 3.21+ and a C++17 compiler (Xcode command line tools, or Visual Studio 2019+).
+SDL2, SDL2_mixer and DirectXMath are downloaded and built by CMake, and linked
+statically.
 
 ```bash
-# Clone repository (if not already done)
-cd augmentinel
-
-# Create build directory and configure
-mkdir build
-cd build
-cmake ..
-
-# Build
-cmake --build .
-
-# Run (from build directory)
-./Augmentinel
+./build.sh            # macOS/Linux: build/Augmentinel
+build.bat             # Windows: build\Release\Augmentinel.exe
 ```
 
-#### Clean Build
+Run `./build.sh debug` for a debug build, and `ctest --test-dir build` for the
+smoke test (it boots into landscape 0000 and saves a screenshot).
 
-To perform a complete clean build:
+Signed release builds come from `./build.sh package` on macOS (Developer ID,
+notarised DMG) and from CI on Windows (SSL.com eSigner). See
+[docs/releasing.md](docs/releasing.md).
 
-```bash
-rm -rf build
-mkdir build
-cd build
-cmake ..
-cmake --build .
-```
+Player controls and settings are described in [packaging/README.txt](packaging/README.txt).
 
-#### Build Details
+### Windows (original D3D11 + VR)
 
-- **C++ Standard**: C++17
-- **Graphics API**: OpenGL 3.3 Core Profile
-- **Math Library**: DirectXMath (cross-platform)
-- **Windowing**: SDL2
-- **Audio**: SDL2_mixer (planned for Phase 4)
-- **Build System**: CMake 3.15+
-
-#### Testing
-
-```bash
-# Run normally (ESC to exit)
-./Augmentinel
-
-# Capture screenshot and exit (for automated testing)
-./Augmentinel --screenshot
-
-# Show help
-./Augmentinel --help
-```
-
-The screenshot tool renders one frame, saves `screenshot.png` (1600x900), and exits automatically.
-
-#### Controls
-
-**Title Screen:**
-- Any Key - Continue to landscape selection
-- ESC - Quit game
-
-**Landscape Selection:**
-- RETURN / Left Click - Select landscape and start
-- LEFT / RIGHT Arrow - Navigate previous/next landscape
-- HOME / END - Jump to first/last landscape
-- PAGE UP / PAGE DOWN - Navigate by pages
-
-**In-Game:**
-- R - Create Robot
-- B / Right Click - Create Boulder
-- T - Create Tree
-- A / Left Click - Absorb Object
-- Q / Mouse Button X1 - Transfer to Robot
-- H - Hyperspace
-- U - U-turn
-- P / Pause - Pause Game
-- LEFT / RIGHT Arrow - Turn left/right
-- UP / DOWN Arrow - Look up/down
-- PAGE UP / PAGE DOWN - Turn 45 degrees left/right
-- Mouse Move - Free look (pan view)
-
-**Audio:**
-- M - Toggle music on/off
-- N - Toggle tunes on/off
-- + / - - Adjust music volume
-
-**Debug:**
-- TAB - Toggle debug overlay (FPS, frame time, draw calls)
-- ESC - Quit to desktop
-
-#### Current Limitations
-
-- Model rendering not yet implemented (Phase 2.8-2.11, then Phase 3)
-- Audio system stubbed out (Phase 4)
-- Settings system stubbed out (Phase 4)
-- VR support not yet ported (future enhancement)
-
-For detailed porting progress, see:
-- `PORTING_TODO.md` - Detailed task checklist
-- `PORTING_PLAN.md` - Implementation plan
-- `PORTING_ANALYSIS.md` - Technical analysis
+Simon Owen's original Win32/Direct3D 11 version, with OpenVR support, is kept in
+the tree (`Augmentinel.sln`) but no longer builds, because the SDL port replaced
+several files it shares. Use the [upstream repository](https://github.com/simonowen/augmentinel)
+for the VR version.
 
 ## License
 
