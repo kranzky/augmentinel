@@ -71,7 +71,7 @@ jobs:
       # The runners have no sound card.
       SDL_AUDIODRIVER: dummy
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure (Windows)
         if: runner.os == 'Windows'
@@ -107,16 +107,17 @@ jobs:
       - name: Smoke test (macOS)
         if: runner.os == 'macOS'
         run: |
-          build/Augmentinel.app/Contents/MacOS/Augmentinel --screenshot "$RUNNER_TEMP/smoke.png" \
+          mkdir -p "$RUNNER_TEMP/smoke"
+          build/Augmentinel.app/Contents/MacOS/Augmentinel --screenshot "$RUNNER_TEMP/smoke/smoke.png" \
             --frames 300 --press 30:Space --press 120:Return
-          test -f "$RUNNER_TEMP/smoke.png"
+          test -f "$RUNNER_TEMP/smoke/smoke.png"
 
       - name: Upload smoke screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: smoke-${{ matrix.os }}
-          path: ${{ runner.temp }}/smoke*/smoke.png
+          path: ${{ runner.temp }}/smoke/smoke.png
           if-no-files-found: ignore
 
       # The .rc embeds the icon and version block; fail if it is missing.
@@ -226,7 +227,7 @@ jobs:
 
       - name: Upload (Windows)
         if: runner.os == 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Augmentinel-windows-x64
           path: dist/Augmentinel-windows-x64/
@@ -234,7 +235,7 @@ jobs:
 
       - name: Upload (macOS)
         if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Augmentinel-macos
           path: dist/Augmentinel-macos.zip
@@ -252,7 +253,7 @@ jobs:
       ITCH_TARGET: kranzky/augmentinel
       BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # The itch.io user version comes from the tag, which must match the
       # version the build was made with.
@@ -272,7 +273,7 @@ jobs:
 
       - name: Download Windows build
         if: env.BUTLER_API_KEY != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: Augmentinel-windows-x64
           path: dist/windows
