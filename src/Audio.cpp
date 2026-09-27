@@ -190,6 +190,21 @@ void Audio::Stop(AudioType type)
     }
 }
 
+bool Audio::IsPlaying(AudioType type) const
+{
+    if (!m_initialized)
+        return false;
+
+    switch (type)
+    {
+    case AudioType::Music:         return m_musicPlaying && Mix_PlayingMusic();
+    case AudioType::Tune:          return Mix_GroupNewer(TUNE_GROUP) >= 0;
+    case AudioType::LoopingEffect: return Mix_Playing(LOOPING_EFFECT_CHANNEL) != 0;
+    case AudioType::Effect:        return Mix_GroupNewer(EFFECT_GROUP) >= 0;
+    }
+    return false;
+}
+
 void Audio::PositionListener(XMFLOAT3 pos, XMFLOAT3 dir, XMFLOAT3 /*up*/)
 {
     m_listenerPos = pos;

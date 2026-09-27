@@ -202,9 +202,9 @@ void Augmentinel::PlayMusic()
 		SetSetting(MUSIC_VOLUME_KEY, m_music_volume);
 	}
 
-	// Music plays if enabled and in a playing state. Tunes use their own mixer
-	// channels, so unlike the original they don't need to pause the music.
-	auto playing = m_music_enabled && m_music_playing;
+	// Music plays if enabled, in a playing state, and when no tune is playing.
+	auto playing = m_music_enabled && m_music_playing &&
+		!m_pAudio->IsPlaying(AudioType::Tune);
 
 	// Start the next track in the shuffled loop if nothing is loaded or the last one finished.
 	if (!m_pAudio->SetMusicPlaying(playing) && playing)
@@ -650,7 +650,7 @@ void Augmentinel::Frame(float fElapsed)
 			constexpr auto max_pitch = PitchToRadians(SENTINEL_MAX_PITCH);
 			m_pView->SetPitchLimits(min_pitch, max_pitch);
 
-			// Don't enable freelook yet - wait until after fade-in completes
+			m_pView->EnableFreeLook(true);
 			m_pView->SetCameraPosition(m_player.pos);
 			m_pView->SetCameraRotation(m_player.rot);
 
@@ -667,14 +667,11 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 1: // fade in to main game
-		{
-			// Wait for fade-in to complete
 			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f))
 				break;
-			m_pView->EnableFreeLook(true);
+
 			m_substate++;
 			break;
-		}
 
 		case 2: // main game
 		{

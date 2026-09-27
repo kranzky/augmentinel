@@ -26,6 +26,7 @@ public:
     void Play(const std::wstring& filename, AudioType type = AudioType::Effect);
     void Play(const std::wstring& filename, AudioType type, XMFLOAT3 pos);
     void Stop(AudioType type);
+    bool IsPlaying(AudioType type) const;
 
     // Music plays each track once; SetMusicPlaying(true) returns false once it has
     // finished (or nothing is loaded) so the caller can start the next track.
