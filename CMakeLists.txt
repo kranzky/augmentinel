@@ -1,236 +1,182 @@
-cmake_minimum_required(VERSION 3.15)
-project(Augmentinel VERSION 1.6.0)
+cmake_minimum_required(VERSION 3.21)
+
+# Pin a deployment target so LSMinimumSystemVersion is meaningful. Must precede project().
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE STRING "Minimum macOS version")
+
+# project(VERSION) is the single source of truth for the version: it feeds the
+# window title, the macOS Info.plist, the Windows version resource and packaging.
+project(Augmentinel VERSION 1.7.0 LANGUAGES C CXX)
+
+# De-duplicate static libraries on link lines (SDL2 also arrives through SDL2_mixer).
+if(POLICY CMP0156)
+    cmake_policy(SET CMP0156 NEW)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Default to Release build if not specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
-# Platform-specific compiler flags
-if(MSVC)
-    # MSVC flags
-    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /DNDEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "/O2 /DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DEBUG "/Od /Zi /DDEBUG")
-    set(CMAKE_C_FLAGS_DEBUG "/Od /Zi /DDEBUG")
-    # Suppress some common warnings
-    add_compile_options(/W3 /wd4244 /wd4267 /wd4996)
-    # Enable static runtime for standalone distribution
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-else()
-    # GCC/Clang flags
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
-    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -DDEBUG")
-endif()
+option(AUGMENTINEL_MACOS_BUNDLE "Build Augmentinel.app instead of a bare executable" OFF)
 
-# Platform definitions
-if(APPLE)
-    add_definitions(-D__APPLE__ -DPLATFORM_MACOS)
-elseif(WIN32)
-    add_definitions(-DWIN32 -DPLATFORM_WINDOWS -D_CRT_SECURE_NO_WARNINGS)
-elseif(UNIX)
-    add_definitions(-D__linux__ -DPLATFORM_LINUX)
-endif()
+# Everything is linked statically, including the MSVC runtime, so the Windows
+# build is a single self-contained exe and the macOS build needs no dylibs.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-# Find packages
-find_package(SDL2 REQUIRED CONFIG)
-find_package(OpenGL REQUIRED)
-
-# GLEW (required on Windows/Linux, not needed on macOS)
-if(NOT APPLE)
-    find_package(GLEW REQUIRED)
-endif()
-
-# SDL2_mixer
-find_library(SDL2_MIXER_LIBRARY SDL2_mixer REQUIRED)
-get_filename_component(SDL2_MIXER_LIB_DIR ${SDL2_MIXER_LIBRARY} DIRECTORY)
-find_path(SDL2_MIXER_INCLUDE_DIR SDL2/SDL_mixer.h
-    HINTS ${SDL2_MIXER_LIB_DIR}/../include
-)
-
-# SDL2_ttf
-find_library(SDL2_TTF_LIBRARY SDL2_ttf REQUIRED)
-get_filename_component(SDL2_TTF_LIB_DIR ${SDL2_TTF_LIBRARY} DIRECTORY)
-find_path(SDL2_TTF_INCLUDE_DIR SDL2/SDL_ttf.h
-    HINTS ${SDL2_TTF_LIB_DIR}/../include
-)
-
-# DirectXMath (cross-platform math library)
+# --- Dependencies (fetched as release tarballs, pinned by hash) ---
 include(FetchContent)
-FetchContent_Declare(
-    directxmath
-    GIT_REPOSITORY https://github.com/microsoft/DirectXMath.git
-    GIT_TAG dec2022
-    GIT_SHALLOW TRUE
-)
-FetchContent_MakeAvailable(directxmath)
+cmake_policy(SET CMP0135 NEW)                            # extracted files get fresh timestamps
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)       # SDL2's own old cmake_minimum_required
 
-# Create stub sal.h for DirectXMath (macOS compatibility)
-# DirectXMath unconditionally includes sal.h but we don't need the annotations
-file(WRITE ${directxmath_SOURCE_DIR}/Inc/sal.h
-"#pragma once
-// Stub SAL annotations for non-Windows platforms
-#define _In_
-#define _Out_
-#define _Inout_
-#define _In_opt_
-#define _Out_opt_
-#define _Inout_opt_
-#define _In_z_
-#define _Out_z_
-#define _Inout_z_
-#define _In_reads_(s)
-#define _Out_writes_(s)
-#define _Inout_updates_(s)
-#define _In_reads_bytes_(s)
-#define _Out_writes_bytes_(s)
-#define _Inout_updates_bytes_(s)
-#define _In_reads_opt_(s)
-#define _Out_writes_opt_(s)
-#define _Inout_updates_opt_(s)
-#define _Out_writes_to_(s,c)
-#define _Out_writes_all_(s)
-#define _Inout_updates_to_(s,c)
-#define _In_reads_to_(s,c)
-#define _Ret_
-#define _Ret_opt_
-#define _Ret_z_
-#define _Check_return_
-#define _Must_inspect_result_
-#define _Success_(expr)
-#define _Return_type_success_(expr)
-#define _Always_(expr)
-#define _On_failure_(expr)
-#define _Post_
-#define _Pre_
-#define _Null_
-#define _Notnull_
-#define _Maybenull_
-#define _Valid_
-#define _Notvalid_
-#define _Readable_bytes_(size)
-#define _Readable_elements_(size)
-#define _Writable_bytes_(size)
-#define _Writable_elements_(size)
-#define _Use_decl_annotations_
-#define _Analysis_assume_(expr)
-")
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
+set(SDL2_DISABLE_INSTALL ON CACHE BOOL "" FORCE)
+set(SDL_FORCE_STATIC_VCRT ON CACHE BOOL "" FORCE)
+FetchContent_Declare(SDL2
+    URL https://github.com/libsdl-org/SDL/releases/download/release-2.32.10/SDL2-2.32.10.tar.gz
+    URL_HASH SHA256=5f5993c530f084535c65a6879e9b26ad441169b3e25d789d83287040a9ca5165)
 
-# Source files
-set(SOURCES
+# SDL2_mixer with only the codecs the game uses: WAV effects and MP3 music (minimp3).
+set(SDL2MIXER_INSTALL OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_SAMPLES OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_VENDORED OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_DEPS_SHARED OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_CMD OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_FLAC OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_GME OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MOD OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MIDI OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_OPUS OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_VORBIS OFF CACHE STRING "" FORCE)
+set(SDL2MIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_MP3 ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_MP3_MINIMP3 ON CACHE BOOL "" FORCE)
+set(SDL2MIXER_MP3_MPG123 OFF CACHE BOOL "" FORCE)
+set(SDL2MIXER_WAVE ON CACHE BOOL "" FORCE)
+FetchContent_Declare(SDL2_mixer
+    URL https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.1/SDL2_mixer-2.8.1.tar.gz
+    URL_HASH SHA256=cb760211b056bfe44f4a1e180cc7cb201137e4d1572f2002cc1be728efd22660)
+
+# DirectXMath is header-only; SOURCE_SUBDIR points nowhere so only the headers are fetched.
+FetchContent_Declare(DirectXMath
+    URL https://github.com/microsoft/DirectXMath/archive/refs/tags/jun2026.tar.gz
+    URL_HASH SHA256=cb46002679b16a25fd11d0a2a13f6a7c7bf9c51bf04258fb5485e5b839da8474
+    SOURCE_SUBDIR headers-only)
+
+FetchContent_MakeAvailable(SDL2 SDL2_mixer DirectXMath)
+
+# DirectXMath includes <sal.h>, which only MSVC provides. Elsewhere use empty annotations.
+set(SAL_STUB_DIR ${CMAKE_BINARY_DIR}/sal-stub)
+if(NOT MSVC)
+    configure_file(${CMAKE_SOURCE_DIR}/cmake/sal.h ${SAL_STUB_DIR}/sal.h COPYONLY)
+endif()
+
+configure_file(${CMAKE_SOURCE_DIR}/src/Version.h.in ${CMAKE_BINARY_DIR}/generated/Version.h @ONLY)
+
+# --- Game ---
+add_executable(Augmentinel
     src/main.cpp
     src/Application.cpp
-    src/OpenGLRenderer.cpp
-    src/DebugOverlay.cpp
-    src/View.cpp
-    src/Augmentinel.cpp
-    src/Spectrum.cpp
-    src/Model.cpp
-    src/Camera.cpp
     src/Animate.cpp
     src/Audio.cpp
+    src/Augmentinel.cpp
+    src/Camera.cpp
+    src/DebugOverlay.cpp
+    src/GL.cpp
+    src/Model.cpp
+    src/OpenGLRenderer.cpp
     src/Settings.cpp
+    src/Spectrum.cpp
+    src/StbImageWrite.cpp
     src/Utils.cpp
-    z80/Z80.c
-)
-
-set(HEADERS
-    src/Platform.h
-    src/Application.h
-    src/OpenGLRenderer.h
-    src/DebugOverlay.h
-    src/Augmentinel.h
-    src/Spectrum.h
-    src/Model.h
-    src/Camera.h
-    src/Animate.h
-    src/Audio.h
-    src/Settings.h
-    src/Utils.h
-    src/Game.h
-    src/Sentinel.h
-    src/Vertex.h
-    src/Action.h
-    src/SimpleHeap.h
-    src/SharedConstants.h
-    z80/Z80.h
-    z80/Z80-support.h
-)
-
-add_executable(Augmentinel ${SOURCES} ${HEADERS})
+    src/View.cpp
+    z80/Z80.c)
 
 target_include_directories(Augmentinel PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/z80
-    ${SDL2_INCLUDE_DIRS}
-    ${SDL2_MIXER_INCLUDE_DIR}
-    ${SDL2_TTF_INCLUDE_DIR}
+    src
+    z80
+    ${CMAKE_BINARY_DIR}/generated
     ${directxmath_SOURCE_DIR}/Inc
-)
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:${SAL_STUB_DIR}>)
 
-# Base libraries
-target_link_libraries(Augmentinel
-    SDL2::SDL2
-    ${SDL2_MIXER_LIBRARY}
-    ${SDL2_TTF_LIBRARY}
-    OpenGL::GL
-)
+target_compile_definitions(Augmentinel PRIVATE
+    CPU_Z80_DEPENDENCIES_H="Z80-support.h"
+    CPU_Z80_USE_LOCAL_HEADER
+    $<$<CONFIG:Debug>:DEBUG>
+    $<$<BOOL:${WIN32}>:_CRT_SECURE_NO_WARNINGS>)
 
-# Platform-specific settings
-if(APPLE)
-    target_compile_definitions(Augmentinel PRIVATE
-        GL_SILENCE_DEPRECATION
-        PLATFORM_MACOS
-        _XM_NO_INTRINSICS_
-        CPU_Z80_DEPENDENCIES_H="Z80-support.h"
-        CPU_Z80_USE_LOCAL_HEADER
-    )
-elseif(WIN32)
-    # GLEW for OpenGL extension loading
-    target_link_libraries(Augmentinel GLEW::GLEW)
-    target_compile_definitions(Augmentinel PRIVATE
-        PLATFORM_WINDOWS
-        CPU_Z80_DEPENDENCIES_H="Z80-support.h"
-        CPU_Z80_USE_LOCAL_HEADER
-    )
-    # Create Windows GUI application (not console)
+if(MSVC)
+    target_compile_options(Augmentinel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/W3 /permissive- /Zc:__cplusplus>)
+else()
+    # DirectXMath vectors are unions, which -Wmissing-braces misreports.
+    target_compile_options(Augmentinel PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra -Wno-missing-braces>)
+endif()
+set_source_files_properties(src/StbImageWrite.cpp PROPERTIES COMPILE_OPTIONS $<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>)
+
+find_package(OpenGL REQUIRED)
+if(WIN32)
+    target_link_libraries(Augmentinel PRIVATE SDL2::SDL2main)  # WinMain -> main
+endif()
+target_link_libraries(Augmentinel PRIVATE SDL2::SDL2-static SDL2_mixer::SDL2_mixer-static OpenGL::GL)
+
+# --- Runtime resources ---
+file(GLOB GLSL_SHADERS CONFIGURE_DEPENDS RELATIVE ${CMAKE_SOURCE_DIR} shaders/*.vert shaders/*.frag)
+file(GLOB_RECURSE SOUND_FILES CONFIGURE_DEPENDS RELATIVE ${CMAKE_SOURCE_DIR} sounds/*.wav sounds/*.mp3)
+set(GAME_RESOURCES 48.rom sentinel.sna ${GLSL_SHADERS} ${SOUND_FILES})
+
+if(APPLE AND AUGMENTINEL_MACOS_BUNDLE)
+    # Resources live in Contents/Resources; bundle name, ID, version and icon come from Info.plist.in.
+    foreach(resource ${GAME_RESOURCES} resources/icon.icns)
+        get_filename_component(subdir ${resource} DIRECTORY)
+        if(resource MATCHES "^resources/")
+            set(subdir "")
+        endif()
+        set_source_files_properties(${resource} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources/${subdir}")
+        target_sources(Augmentinel PRIVATE ${resource})
+    endforeach()
+    configure_file(${CMAKE_SOURCE_DIR}/packaging/macos/Info.plist.in
+                   ${CMAKE_BINARY_DIR}/generated/Info.plist @ONLY)
+    set_target_properties(Augmentinel PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_BINARY_DIR}/generated/Info.plist)
+else()
+    # Copy resources beside the executable, tracking each file so edits are picked up.
+    get_property(multi_config GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+    if(multi_config)
+        set(runtime_dir ${CMAKE_BINARY_DIR}/$<CONFIG>)
+    else()
+        set(runtime_dir ${CMAKE_BINARY_DIR})
+    endif()
+    set_target_properties(Augmentinel PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${runtime_dir})
+
+    set(resource_outputs "")
+    foreach(resource ${GAME_RESOURCES})
+        set(output "${runtime_dir}/${resource}")
+        add_custom_command(OUTPUT ${output}
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/${resource} ${output}
+            DEPENDS ${CMAKE_SOURCE_DIR}/${resource}
+            VERBATIM)
+        list(APPEND resource_outputs ${output})
+    endforeach()
+    add_custom_target(AugmentinelResources DEPENDS ${resource_outputs})
+    add_dependencies(Augmentinel AugmentinelResources)
+endif()
+
+if(WIN32)
     set_target_properties(Augmentinel PROPERTIES WIN32_EXECUTABLE TRUE)
-elseif(UNIX)
-    # Linux
-    target_link_libraries(Augmentinel GLEW::GLEW)
-    target_compile_definitions(Augmentinel PRIVATE
-        PLATFORM_LINUX
-        _XM_NO_INTRINSICS_
-        CPU_Z80_DEPENDENCIES_H="Z80-support.h"
-        CPU_Z80_USE_LOCAL_HEADER
-    )
+    set(AUGMENTINEL_ICON_PATH "${CMAKE_SOURCE_DIR}/resources/augmentinel.ico")
+    configure_file(${CMAKE_SOURCE_DIR}/packaging/windows/Augmentinel.rc.in
+                   ${CMAKE_BINARY_DIR}/generated/Augmentinel.rc @ONLY)
+    target_sources(Augmentinel PRIVATE ${CMAKE_BINARY_DIR}/generated/Augmentinel.rc)
 endif()
 
-# Copy resources to build directory
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/48.rom
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sentinel.sna
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
-# Copy sounds directory if it exists
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sounds)
-    file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/sounds
-         DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-endif()
-
-# Copy shaders directory
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/shaders
-     DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
-# Print configuration info
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "SDL2 found: ${SDL2_FOUND}")
-message(STATUS "SDL2_mixer library: ${SDL2_MIXER_LIBRARY}")
-message(STATUS "OpenGL found: ${OPENGL_FOUND}")
-message(STATUS "DirectXMath: ${directxmath_SOURCE_DIR}")
+# --- Smoke test: boot the emulator, tap through the title screen into landscape 0000,
+# and save a screenshot of the game. Needs a desktop session for OpenGL.
+enable_testing()
+add_test(NAME smoke COMMAND Augmentinel --screenshot ${CMAKE_BINARY_DIR}/smoke.png
+    --frames 300 --press 30:Space --press 120:Return)

@@ -2,7 +2,7 @@
 #include "Augmentinel.h"
 #include "Action.h"
 #include "Audio.h"
-#include "OpenGLRenderer.h"
+#include "View.h"
 #include "Settings.h"
 
 constexpr auto MAX_STATE_FRAMES = 1000;			 // max emulated frames in the current state.
@@ -26,7 +26,6 @@ constexpr auto SENTINEL_SNAPSHOT_FILE = L"sentinel.sna";
 static const auto LANDSCAPES_SECTION{L"Landscapes"};
 static const auto LAST_LANDSCAPE_KEY{L"LastLandscape"};
 static const auto MOUSE_SPEED_KEY{L"MouseSpeed"};
-static const auto SOUND_PACK_KEY{L"SoundPack"};
 static const auto GAME_SPEED_KEY{L"GameSpeed"};
 static const auto TUNES_ENABLED_KEY{L"TunesEnabled"};
 static const auto MUSIC_ENABLED_KEY{L"MusicEnabled"};
@@ -35,7 +34,6 @@ static const auto VERTICAL_FOV_KEY{L"VerticalFov"};
 
 static const auto SOUND_PACK_DIR{L"sounds"};
 static const auto MUSIC_SUBDIR{L"music"};
-static const auto DEFAULT_SOUND_PACK{L"Commodore Amiga"};
 static const auto DEFAULT_GAME_SPEED{120};
 static const auto DEFAULT_TUNES_ENABLED{true};
 static const auto DEFAULT_MUSIC_ENABLED{true};
@@ -61,7 +59,7 @@ static std::vector<const wchar_t *> effects_and_tunes{
 		GAMEOVER_TUNE, HYPERSPACE_TUNE, MEANIE_SOUND, PING_SOUND, PONG_SOUND,
 		SEEN_SOUND, TITLE_TUNE, TRANSFER_TUNE, TURN_SOUND, UTURN_TUNE};
 
-static std::vector<std::wstring> music_files;
+static std::vector<fs::path> music_files;
 static decltype(music_files.begin()) it_music;
 
 static std::vector<ActionBinding> action_bindings =
@@ -122,20 +120,16 @@ std::vector<std::pair<int, std::wstring>> msaa_modes{
 Augmentinel::Augmentinel(std::shared_ptr<View> &pView, std::shared_ptr<Audio> &pAudio)
 		: m_pView(pView), m_pAudio(pAudio)
 {
-	// Pre-load all sound effects and music from the current sound pack.
-	// Use Audio's configured path (already set by Application from settings)
-	auto sound_path = pAudio->GetSoundsDir();
+	// Pre-load all sound effects from the current sound pack.
 	for (auto &sound : effects_and_tunes)
-		pAudio->LoadWAV(sound_path / sound);
+		pAudio->Preload(sound);
 
-	auto music_path = fs::path(g_resourcePath) / SOUND_PACK_DIR / MUSIC_SUBDIR;
-	for (auto &p : fs::directory_iterator(music_path))
+	// Music is streamed, so just collect the track paths.
+	std::error_code ec;
+	for (auto &p : fs::directory_iterator(g_resourcePath / SOUND_PACK_DIR / MUSIC_SUBDIR, ec))
 	{
 		if (p.path().extension() == ".mp3")
-		{
-			// Music files use PlayMusic() not LoadWAV(), so just collect full paths
-			music_files.push_back(p.path().wstring());
-		}
+			music_files.push_back(p.path());
 	}
 
 	// Shuffle music playback order, but play the selection in a loop.
@@ -208,12 +202,12 @@ void Augmentinel::PlayMusic()
 		SetSetting(MUSIC_VOLUME_KEY, m_music_volume);
 	}
 
-	// Music plays if enabled and in a playing state
-	// Note: Tunes no longer interrupt music due to channel management
-	auto playing = m_music_enabled && m_music_playing;
+	// Music plays if enabled, in a playing state, and when no tune is playing.
+	auto playing = m_music_enabled && m_music_playing &&
+		!m_pAudio->IsPlaying(AudioType::Tune);
 
-	// Only try to start music if we want it playing
-	if (playing && !m_pAudio->SetMusicPlaying(playing))
+	// Start the next track in the shuffled loop if nothing is loaded or the last one finished.
+	if (!m_pAudio->SetMusicPlaying(playing) && playing)
 	{
 		if (it_music != music_files.end())
 			it_music++;
@@ -221,21 +215,10 @@ void Augmentinel::PlayMusic()
 		if (it_music == music_files.end())
 			it_music = music_files.begin();
 
-		// Use PlayMusic() instead of Play() - music uses Mix_Music*, not Mix_Chunk*
-		if (it_music != music_files.end())
-		{
-			m_pAudio->PlayMusic(*it_music, true); // Loop music
+		if (m_pAudio->PlayMusic(*it_music))
 			m_pAudio->SetMusicVolume(m_music_volume / 100.0f);
-		}
 		else
-		{
 			it_music = music_files.erase(it_music);
-		}
-	}
-	else if (!playing)
-	{
-		// Stop music if we don't want it playing
-		m_pAudio->SetMusicPlaying(false);
 	}
 }
 
@@ -263,10 +246,8 @@ void Augmentinel::Render(IScene *pScene)
 
 		auto dissolved = std::min(std::max((pitch_deg + 25.0f) / 5.0f, 0.0f), 1.0f);
 
-		for (size_t i = 0; i < m_icons.size(); ++i)
+		for (auto &icon : m_icons)
 		{
-			auto &icon = m_icons[i];
-
 			if (m_pView->IsVR())
 			{
 				vPos += vRight * icon_spacing;
@@ -275,27 +256,6 @@ void Augmentinel::Render(IScene *pScene)
 				icon.rot.y = yaw_from_dir(cam_dir);
 				icon.scale = 0.1f;
 				icon.dissolved = dissolved;
-			}
-			else
-			{
-				// Flat mode: Update icon positions based on current window size
-				// This ensures icons stay in top-left corner when window is resized
-				float width = static_cast<float>(m_pView->GetWidth());
-				float height = static_cast<float>(m_pView->GetHeight());
-				float half_width = width / 2.0f;
-				float half_height = height / 2.0f;
-
-				static constexpr auto x_edge_offset = 5.0f;
-				static constexpr auto y_edge_offset = 30.0f;
-				static constexpr auto scale = 27.0f;	 // Icon size - constant regardless of window size
-				static constexpr auto spacing = 27.0f; // Icon spacing - constant regardless of window size
-
-				auto x_base = -half_width + x_edge_offset;
-				auto y = half_height - y_edge_offset;
-
-				icon.pos.x = x_base + spacing * static_cast<float>(i);
-				icon.pos.y = y;
-				icon.scale = scale;
 			}
 
 			pScene->DrawModel(icon);
@@ -392,7 +352,7 @@ void Augmentinel::Frame(float fElapsed)
 	{
 	case GameState::Reset:
 	{
-		if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
+		if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
 			break;
 
 		SetSeen(SeenState::Unseen);
@@ -406,7 +366,7 @@ void Augmentinel::Frame(float fElapsed)
 		m_icons = {};
 
 		// Load the Spectrum game snapshot into an emulation object.
-		m_spectrum = std::move(std::make_unique<Spectrum>(SENTINEL_SNAPSHOT_FILE, this));
+		m_spectrum = std::make_unique<Spectrum>(SENTINEL_SNAPSHOT_FILE, this);
 
 		// Limit the number of emulated frames to advance beyond reset state.
 		if (!RunUntilStateChange())
@@ -481,7 +441,7 @@ void Augmentinel::Frame(float fElapsed)
 
 		case 2:
 			// Fade out the title screen.
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
 				break;
 
 			if (!RunUntilStateChange())
@@ -579,7 +539,7 @@ void Augmentinel::Frame(float fElapsed)
 				m_landscape.rot.y += fElapsed / 8.0f;
 
 			// Fade in landscape preview without delaying keyboard interaction.
-			m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.1f);
+			m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed);
 
 			const auto it_current = m_codes.find(m_landscape_bcd);
 			auto it_new = it_current;
@@ -651,7 +611,7 @@ void Augmentinel::Frame(float fElapsed)
 			break;
 		}
 		case 2:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
 				break;
 
 			m_landscape.rot.y = 0.0f;
@@ -690,7 +650,7 @@ void Augmentinel::Frame(float fElapsed)
 			constexpr auto max_pitch = PitchToRadians(SENTINEL_MAX_PITCH);
 			m_pView->SetPitchLimits(min_pitch, max_pitch);
 
-			// Don't enable freelook yet - wait until after fade-in completes
+			m_pView->EnableFreeLook(true);
 			m_pView->SetCameraPosition(m_player.pos);
 			m_pView->SetCameraRotation(m_player.rot);
 
@@ -707,14 +667,11 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 1: // fade in to main game
-		{
-			// Wait for fade-in to complete
 			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f))
 				break;
-			m_pView->EnableFreeLook(true);
+
 			m_substate++;
 			break;
-		}
 
 		case 2: // main game
 		{
@@ -828,26 +785,16 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 3: // paused
-		{
-			// Fade to 0.5 once, then keep checking for input
-			static bool fade_complete = false;
-			if (!fade_complete)
-			{
-				fade_complete = m_pView->TransitionEffect(ViewEffect::Fade, 0.5f, fElapsed, 0.5f);
-				if (!fade_complete)
-					break;
-			}
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.5f, fElapsed, 0.5f))
+				break;
 
 			if (m_pView->InputAction(Action::Pause))
 			{
-				fade_complete = false; // Reset for next time
 				// Enable mouse, then fade in to continue game.
 				m_pView->EnableFreeLook(true);
 				m_substate = 1;
-				break;
 			}
 			break;
-		}
 		}
 
 		break;
@@ -858,7 +805,7 @@ void Augmentinel::Frame(float fElapsed)
 		switch (m_substate)
 		{
 		case 0:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
 				break;
 
 			SetSeen(SeenState::Unseen);
@@ -896,24 +843,16 @@ void Augmentinel::Frame(float fElapsed)
 		}
 
 		case 2:
-			static bool fade_complete = false;
-			if (!fade_complete)
-			{
-				fade_complete = m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f);
-				if (!fade_complete)
-					break;
-			}
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 0.0f, fElapsed, 0.5f))
+				break;
 
 			if (m_pView->InputAction(Action::SkyViewContinue))
-			{
-				fade_complete = false; // Reset for next time
 				m_substate++;
-			}
 
 			break;
 
 		case 3:
-			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 0.1f))
+			if (!m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed))
 				break;
 
 			PlayTune(UTURN_TUNE);
@@ -988,21 +927,23 @@ void Augmentinel::Frame(float fElapsed)
 
 	case GameState::ShowKiller:
 	{
+		constexpr auto min_fade = 0.4f;
+
 		switch (m_substate)
 		{
 		case 0: // fade in from black
-			if (m_pView->TransitionEffect(ViewEffect::Fade, 0.6f, fElapsed, 3.0f))
+			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f - min_fade, fElapsed, 2.0f / min_fade))
 				m_substate++;
 			break;
 
 		case 1: // slow fade out to black
-			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 2.0f))
+			if (m_pView->TransitionEffect(ViewEffect::Fade, 0.99f, fElapsed, 4.0f / min_fade))
 				m_substate++;
 			break;
 
 		case 2:
 			// slight pause on black
-			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 1.0f))
+			if (m_pView->TransitionEffect(ViewEffect::Fade, 1.0f, fElapsed, 1.0f / 0.01f))
 				m_substate++;
 			break;
 		default:
@@ -1029,9 +970,7 @@ void Augmentinel::Frame(float fElapsed)
 
 	case GameState::Unknown:
 #ifdef PLATFORM_WINDOWS
-#ifdef PLATFORM_WINDOWS
 		DebugBreak();
-#endif
 #endif
 		break;
 	}
@@ -1112,13 +1051,13 @@ void Augmentinel::LoadLandscapeCodes()
 
 	for (auto &landscape_key : GetSettingKeys(LANDSCAPES_SECTION))
 	{
-		auto landscape_bcd = std::stoul(landscape_key.c_str(), nullptr, 16);
-		auto secret_code_bcd = std::stoul(GetSetting(landscape_key, L"0", LANDSCAPES_SECTION), nullptr, 16);
+		auto landscape_bcd = std::wcstoul(landscape_key.c_str(), nullptr, 16);
+		auto secret_code_bcd = std::wcstoul(GetSetting(landscape_key, L"0", LANDSCAPES_SECTION).c_str(), nullptr, 16);
 		m_codes[landscape_bcd] = secret_code_bcd;
 	}
 
 	auto last_landscape_bcd = GetSetting(LAST_LANDSCAPE_KEY, L"0");
-	m_landscape_bcd = std::stoul(last_landscape_bcd, nullptr, 16);
+	m_landscape_bcd = std::wcstoul(last_landscape_bcd.c_str(), nullptr, 16);
 
 	// If the last landscape isn't valid, use 0000.
 	if (m_codes.find(m_landscape_bcd) == m_codes.end())
@@ -1165,7 +1104,7 @@ bool Augmentinel::SceneRayTest(XMVECTOR vRayPos, XMVECTOR vRayDir, RayTarget &hi
 
 	for (auto &model : m_drawn_models)
 	{
-		if (model.id >= TEMP_ID_BASE || ignore_id >= 0 && model.id == ignore_id)
+		if (model.id >= TEMP_ID_BASE || (ignore_id >= 0 && model.id == ignore_id))
 			continue;
 
 		if (model.RayTest(vRayPos, vRayDir, hit))
@@ -1378,16 +1317,7 @@ void Augmentinel::ChangeState(GameState new_state)
 		m_pAudio->Stop(AudioType::Tune);
 		m_pAudio->Stop(AudioType::LoopingEffect);
 	}
-	// Note: We don't stop AudioType::Effect as they are short one-shots
-	// Note: We don't stop AudioType::Music - music continues across states
-
-	// Clear model cache when changing states to prevent stale geometry
-	// from being reused when memory addresses are recycled
-	auto renderer = std::dynamic_pointer_cast<OpenGLRenderer>(m_pView);
-	if (renderer)
-	{
-		renderer->ClearModelCache();
-	}
+	// One-shot effects are left to finish, and music continues across states.
 }
 
 bool Augmentinel::RunUntilStateChange()
@@ -1827,25 +1757,12 @@ void Augmentinel::OnHideEnergyPanel()
 
 void Augmentinel::OnAddEnergySymbol(int symbol_idx, int x_offset)
 {
-	// Orthographic screen coordinates scale with window size
-	// Position icons at top-left of screen (matching PC version)
-	// Calculate positions based on current window dimensions
-	float width = static_cast<float>(m_pView->GetWidth());
-	float height = static_cast<float>(m_pView->GetHeight());
-	float half_width = width / 2.0f;
-	float half_height = height / 2.0f;
-
-	// Offsets from edges (constant pixel offset)
-	static constexpr auto x_edge_offset = 5.0f;
-	static constexpr auto y_edge_offset = 30.0f;
-
-	// Icon size and spacing - constant regardless of window size (matching PC version)
-	static constexpr auto scale = 27.0f;	 // Icon size in orthographic units
-	static constexpr auto spacing = 35.0f; // Spacing between icons in orthographic units
-
-	auto x_base = -half_width + x_edge_offset;
-	auto y = half_height - y_edge_offset;
+	// Positions are in the orthographic UI space: 1000 units high, from the bottom-left.
+	static constexpr auto x_base = -10.0f;
+	static constexpr auto y = 970.0f;
 	static constexpr auto z = FAR_CLIP / 2.0f;
+	static constexpr auto scale = 30.0f;
+	static constexpr auto spacing = 20.0f;
 
 	// Clear existing icons if the panel is being redrawn.
 	if (x_offset == 0)

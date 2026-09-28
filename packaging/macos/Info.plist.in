@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Augmentinel.app Info.plist, configured by CMake when AUGMENTINEL_MACOS_BUNDLE=ON.
+     The version comes from project(VERSION) and the minimum OS from CMAKE_OSX_DEPLOYMENT_TARGET. -->
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Augmentinel</string>
+    <key>CFBundleDisplayName</key>
+    <string>Augmentinel</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.kranzky.Augmentinel</string>
+    <key>CFBundleExecutable</key>
+    <string>Augmentinel</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleShortVersionString</key>
+    <string>@PROJECT_VERSION@</string>
+    <key>CFBundleVersion</key>
+    <string>@PROJECT_VERSION@</string>
+    <key>CFBundleIconFile</key>
+    <string>icon</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>© 2022 Simon Owen, macOS/Windows port © 2025-2026 Jason Hutchens. GPL v3.</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>@CMAKE_OSX_DEPLOYMENT_TARGET@</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.games</string>
+</dict>
+</plist>

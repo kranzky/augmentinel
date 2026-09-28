@@ -1,19 +1,36 @@
 #include "Platform.h"
 #include "View.h"
 
-// Stub implementations for Phase 1
-// These will be properly implemented as OpenGL-specific in later phases
-
-View::~View()
+// Actions that repeat for as long as their key is held, rather than once per press.
+static bool IsContinuousAction(Action action)
 {
+    return action == Action::TurnLeft || action == Action::TurnRight ||
+           action == Action::LookUp || action == Action::LookDown;
 }
 
-void View::SetPalette(const std::vector<XMFLOAT4> &palette)
+// Keys that never count as "any key": Escape has its own meaning, and modifiers are
+// pressed for system shortcuts (Alt-Tab, Cmd-Tab, screenshots).
+static bool IsExcludedFromAnyKey(int key)
 {
-    for (size_t i = 0; i < palette.size() && i < m_vertexConstants.Palette.size(); ++i)
+    switch (key)
     {
-        m_vertexConstants.Palette[i] = palette[i];
+    case SDLK_ESCAPE:
+    case SDLK_LSHIFT: case SDLK_RSHIFT:
+    case SDLK_LCTRL:  case SDLK_RCTRL:
+    case SDLK_LALT:   case SDLK_RALT:
+    case SDLK_LGUI:   case SDLK_RGUI:
+        return true;
+    default:
+        return false;
     }
+}
+
+View::~View() = default;
+
+void View::SetPalette(const std::vector<XMFLOAT4>& palette)
+{
+    auto count = std::min(palette.size(), m_vertexConstants.Palette.size());
+    std::copy_n(palette.begin(), count, m_vertexConstants.Palette.begin());
 }
 
 void View::SetFillColour(int fill_colour_idx)
@@ -34,71 +51,6 @@ void View::SetMouseSpeed(int percent)
 void View::EnableFreeLook(bool enable)
 {
     m_freelook = enable;
-}
-
-bool View::InputAction(Action action)
-{
-    auto it = m_key_bindings.find(action);
-    if (it == m_key_bindings.end())
-    {
-        return false;
-    }
-
-    // Check if any of the bound keys are just pressed or just released
-    // Only check edge states (DownEdge) for one-shot actions
-    // For continuous movement actions, also check Down state
-    for (int key : it->second)
-    {
-        auto key_state = GetKeyState(key);
-        if (key_state == KeyState::DownEdge)
-        {
-            return true;
-        }
-
-        // Also check Down state for continuous movement actions
-        if (key_state == KeyState::Down)
-        {
-            if (action == Action::TurnLeft || action == Action::TurnRight ||
-                action == Action::LookUp || action == Action::LookDown ||
-                action == Action::Hyperspace || action == Action::U_Turn ||
-                action == Action::Transfer || action == Action::Robot ||
-                action == Action::Boulder || action == Action::Tree)
-            {
-                return true;
-            }
-        }
-    }
-
-    // Special handling for VK_ANY - any key pressed (excluding ESC and modifier keys)
-    if (std::find(it->second.begin(), it->second.end(), VK_ANY) != it->second.end())
-    {
-        // Check if any key is pressed, but exclude ESC and modifier keys
-        // This allows ALT-TAB, screenshots, etc. without triggering game actions
-        for (const auto &pair : m_keys)
-        {
-            int key = pair.first;
-            // Skip ESC and modifier keys (shift, ctrl, alt, gui/command)
-            if (key == VK_ESCAPE ||
-                key == VK_LSHIFT || key == VK_RSHIFT ||
-                key == VK_LCONTROL || key == VK_RCONTROL ||
-                key == VK_LALT || key == VK_RALT ||
-                key == VK_LGUI || key == VK_RGUI)
-            {
-                continue;
-            }
-
-            if (pair.second == KeyState::Down || pair.second == KeyState::DownEdge)
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-void View::OutputAction(Action action)
-{
 }
 
 XMFLOAT3 View::GetEyePosition() const
@@ -154,6 +106,11 @@ void View::SetCameraRotation(XMFLOAT3 rot)
     m_camera.SetRotation(rot);
 }
 
+void View::SetPitchLimits(float min_pitch, float max_pitch)
+{
+    m_camera.SetPitchLimits(min_pitch, max_pitch);
+}
+
 bool View::IsVR() const
 {
     return false;
@@ -164,28 +121,11 @@ bool View::IsSuspended() const
     return false;
 }
 
-void View::SetVerticalFOV(float fov)
+void View::SetVerticalFOV(float /*fov*/)
 {
 }
 
-void View::OnResize(uint32_t rt_width, uint32_t rt_height)
-{
-}
-
-void View::SetInputBindings(const std::vector<ActionBinding> &bindings)
-{
-    m_key_bindings.clear();
-    for (const auto &binding : bindings)
-    {
-        m_key_bindings[binding.action] = binding.virt_keys;
-    }
-}
-
-void View::PollInputBindings(const std::vector<ActionBinding> &bindings)
-{
-}
-
-void View::ResetHMD(bool reset)
+void View::OnResize(uint32_t /*rt_width*/, uint32_t /*rt_height*/)
 {
 }
 
@@ -193,81 +133,72 @@ void View::BeginScene()
 {
 }
 
+void View::DrawModel(Model& /*model*/, const Model& /*linkedModel*/)
+{
+}
+
+void View::DrawControllers()
+{
+    // VR only.
+}
+
+void View::ResetHMD(bool /*reset*/)
+{
+    // VR only.
+}
+
+void View::OutputAction(Action /*action*/)
+{
+    // VR only (haptics).
+}
+
+void View::PollInputBindings(const std::vector<ActionBinding>& /*bindings*/)
+{
+    // VR only.
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Effects
+
 float View::GetEffect(ViewEffect effect) const
 {
     switch (effect)
     {
-    case ViewEffect::Dissolve:
-        return m_pixelConstants.view_dissolve;
-    case ViewEffect::Desaturate:
-        return m_pixelConstants.view_desaturate;
-    case ViewEffect::Fade:
-        return m_pixelConstants.view_fade;
-    case ViewEffect::ZFade:
-        return m_vertexConstants.z_fade;
-    case ViewEffect::FogDensity:
-        return m_vertexConstants.fog_density;
-    default:
-        return 0.0f;
+    case ViewEffect::Dissolve:   return m_pixelConstants.view_dissolve;
+    case ViewEffect::Desaturate: return m_pixelConstants.view_desaturate;
+    case ViewEffect::Fade:       return m_pixelConstants.view_fade;
+    case ViewEffect::ZFade:      return m_vertexConstants.z_fade;
+    case ViewEffect::FogDensity: return m_vertexConstants.fog_density;
     }
+    return 0.0f;
 }
 
 void View::SetEffect(ViewEffect effect, float value)
 {
     switch (effect)
     {
-    case ViewEffect::Dissolve:
-        m_pixelConstants.view_dissolve = value;
-        break;
-    case ViewEffect::Desaturate:
-        m_pixelConstants.view_desaturate = value;
-        break;
-    case ViewEffect::Fade:
-        m_pixelConstants.view_fade = value;
-        break;
-    case ViewEffect::ZFade:
-        m_vertexConstants.z_fade = value;
-        break;
-    case ViewEffect::FogDensity:
-        m_vertexConstants.fog_density = value;
-        break;
+    case ViewEffect::Dissolve:   m_pixelConstants.view_dissolve = value; break;
+    case ViewEffect::Desaturate: m_pixelConstants.view_desaturate = value; break;
+    case ViewEffect::Fade:       m_pixelConstants.view_fade = value; break;
+    case ViewEffect::ZFade:      m_vertexConstants.z_fade = value; break;
+    case ViewEffect::FogDensity: m_vertexConstants.fog_density = value; break;
     }
 }
 
+// Move an effect towards a target value at a rate that covers the full 0-1 range in
+// total_fade_time seconds. Returns true once the effect is already at the target, so
+// callers can wait on it every frame without any extra state.
 bool View::TransitionEffect(ViewEffect effect, float target_value, float elapsed, float total_fade_time)
 {
-    // Check if we need to start a new transition or update an existing one
-    auto it = m_transitions.find(effect);
+    auto current_value = GetEffect(effect);
+    auto value_change = elapsed / total_fade_time;
 
-    if (it == m_transitions.end() || it->second.target_value != target_value)
-    {
-        // Start a new transition
-        TransitionState state;
-        state.start_value = GetEffect(effect);
-        state.target_value = target_value;
-        state.elapsed_time = 0.0f;
-        state.total_time = total_fade_time;
-        m_transitions[effect] = state;
-        it = m_transitions.find(effect);
-    }
+    if (target_value > current_value)
+        SetEffect(effect, std::min(current_value + value_change, target_value));
+    else
+        SetEffect(effect, std::max(current_value - value_change, target_value));
 
-    // Update elapsed time
-    it->second.elapsed_time += elapsed;
-
-    // Check if transition is complete
-    if (it->second.elapsed_time >= it->second.total_time)
-    {
-        SetEffect(effect, target_value);
-        m_transitions.erase(it);
-        return true;
-    }
-
-    // Linear interpolation based on elapsed time
-    float t = it->second.elapsed_time / it->second.total_time;
-    float new_value = it->second.start_value + (it->second.target_value - it->second.start_value) * t;
-
-    SetEffect(effect, new_value);
-    return false;
+    return current_value == target_value;
 }
 
 void View::EnableAnimatedNoise(bool enable)
@@ -282,83 +213,44 @@ bool View::PixelShaderEffectsActive() const
            m_pixelConstants.view_fade > 0.0f;
 }
 
-void View::SetPitchLimits(float min_pitch, float max_pitch)
-{
-    m_camera.SetPitchLimits(min_pitch, max_pitch);
-}
+////////////////////////////////////////////////////////////////////////////////
+// Input
 
 void View::MouseMove(int x, int y)
 {
     if (!m_freelook)
-    {
         return;
-    }
 
-    // SDL relative mouse mode provides raw hardware deltas (mickeys), which are much
-    // larger than the screen-space pixel deltas used by the Windows version.
-    // Scale down to approximate Windows behavior.
+    // SDL relative mouse deltas are much larger than the window-space deltas the
+    // original Windows version was tuned for, so scale them down to match.
     constexpr float SDL_RAW_DELTA_SCALE = 1000.0f;
 
-    // Convert mouse delta to camera rotation
-    // x = horizontal movement (yaw), y = vertical movement (pitch)
     m_camera.Yaw((x / SDL_RAW_DELTA_SCALE) / m_mouse_divider);
     m_camera.Pitch((y / SDL_RAW_DELTA_SCALE) / m_mouse_divider * (m_invert_mouse ? -1 : 1));
 }
 
 void View::UpdateKey(int virtKey, KeyState state)
 {
-    m_keys[virtKey] = state;
-}
-
-KeyState View::GetKeyState(int key)
-{
-    auto it = m_keys.find(key);
-    return it != m_keys.end() ? it->second : KeyState::Up;
-}
-
-bool View::AnyKeyPressed()
-{
-    for (const auto &pair : m_keys)
+    if (state == KeyState::DownEdge)
     {
-        if (pair.second == KeyState::Down || pair.second == KeyState::DownEdge)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-void View::ProcessDebugKeys()
-{
-}
-
-void View::ProcessKeyEdges()
-{
-    // Convert edge states to sustained states
-    for (auto &pair : m_keys)
-    {
-        if (pair.second == KeyState::DownEdge)
-        {
-            pair.second = KeyState::Down;
-        }
-        else if (pair.second == KeyState::UpEdge)
-        {
-            pair.second = KeyState::Up;
-        }
+        m_keys[virtKey] = KeyState::DownEdge;
+        return;
     }
 
-    // Remove keys that are in Up state to keep map clean
+    // A release before the press was consumed is kept until the end of the frame,
+    // so a tap whose press and release arrive together still triggers its action.
+    auto it = m_keys.find(virtKey);
+    if (it != m_keys.end() && it->second == KeyState::DownEdge)
+        it->second = KeyState::UpEdge;
+    else if (it != m_keys.end())
+        m_keys.erase(it);
+}
+
+void View::EndInputFrame()
+{
+    // Drop taps that nothing consumed this frame, as a released key would be.
     for (auto it = m_keys.begin(); it != m_keys.end();)
-    {
-        if (it->second == KeyState::Up)
-        {
-            it = m_keys.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
+        it = (it->second == KeyState::UpEdge) ? m_keys.erase(it) : std::next(it);
 }
 
 void View::ReleaseKeys()
@@ -366,12 +258,71 @@ void View::ReleaseKeys()
     m_keys.clear();
 }
 
-void View::DrawModel(Model &model, const Model &linkedModel)
+bool View::ConsumeKeyPress(int key)
 {
-    // Stub for Phase 1 - will be implemented in OpenGLRenderer
+    auto it = m_keys.find(key);
+    if (it == m_keys.end())
+        return false;
+
+    switch (it->second)
+    {
+    case KeyState::DownEdge:
+        it->second = KeyState::Down;
+        return true;
+    case KeyState::UpEdge:
+        m_keys.erase(it);
+        return true;
+    default:
+        return false;
+    }
 }
 
-void View::DrawControllers()
+bool View::IsKeyActive(int key) const
 {
-    // Stub for VR - not used in Phase 1
+    return m_keys.find(key) != m_keys.end();
+}
+
+bool View::ConsumeAnyKeyPress()
+{
+    for (auto& [key, state] : m_keys)
+    {
+        if (!IsExcludedFromAnyKey(key) && (state == KeyState::DownEdge || state == KeyState::UpEdge))
+            return ConsumeKeyPress(key);
+    }
+    return false;
+}
+
+void View::SetInputBindings(const std::vector<ActionBinding>& bindings)
+{
+    m_key_bindings.clear();
+    for (const auto& binding : bindings)
+        m_key_bindings[binding.action] = binding.virt_keys;
+}
+
+// Continuous actions are active while any bound key is held. Other actions trigger
+// once per press, consuming it so that no other check in the frame sees it again.
+bool View::InputAction(Action action)
+{
+    auto it = m_key_bindings.find(action);
+    if (it == m_key_bindings.end())
+        return false;
+
+    for (auto key : it->second)
+    {
+        if (key == VK_ANY)
+        {
+            if (ConsumeAnyKeyPress())
+                return true;
+        }
+        else if (IsContinuousAction(action) ? IsKeyActive(key) : ConsumeKeyPress(key))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void View::ProcessDebugKeys()
+{
 }

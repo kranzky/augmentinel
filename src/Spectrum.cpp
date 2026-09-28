@@ -6,7 +6,7 @@
 static constexpr int SNA_HEADER_SIZE = 27;
 
 static constexpr int ZX_SEEN_INDICATOR_FLAGS_ADDR = 0x6004;
-static constexpr int ZX_PLAYER_ENERGY_ADDR = 0x600a;
+[[maybe_unused]] static constexpr int ZX_PLAYER_ENERGY_ADDR = 0x600a;
 static constexpr int ZX_PLAYER_SEEN_FLAGS_ADDR = 0x604f;
 static constexpr int ZX_BCD_SECRET_CODE_ADDR = 0x60f0;
 static constexpr int ZX_BCD_LANDSCAPE_LSB = 0x60fd;
@@ -19,7 +19,7 @@ static constexpr int ZX_PLAYER_OBJ_IDX_ADDR = 0x650b;
 static constexpr int ZX_VERTEX_INDICES_ADDR = 0x6600;
 static constexpr int ZX_FACE_INDICES_ADDR = 0x660b;
 static constexpr int ZX_COORDS_ADDR = 0x66a0;
-static constexpr int ZX_FACE_COLOURS_ADDR = 0x6880;
+[[maybe_unused]] static constexpr int ZX_FACE_COLOURS_ADDR = 0x6880;
 static constexpr int ZX_FACE_LSBS_ADDR = 0x6920;
 static constexpr int ZX_FACE_MSBS_ADDR = 0x69c0;
 static constexpr int ZX_PANEL_ICONS_ADDR = 0x6ca0;
@@ -302,11 +302,15 @@ uint16_t Spectrum::DPoke(uint16_t address, uint16_t value)
 
 void Spectrum::LoadSnapshot(const std::wstring& filename)
 {
-	m_mem = FileContents(to_wstring(g_resourcePath) + L"48.rom");
+	m_mem = FileContents(g_resourcePath / "48.rom");
+	if (m_mem.size() != SPECTRUM_ROM_SIZE)
+		throw std::runtime_error("48.rom is not a 16K Spectrum ROM");
 	m_mem.resize(SPECTRUM_MEM_SIZE);
 
-	auto file = FileContents(to_wstring(g_resourcePath) + filename);
-	std::copy(file.begin() + 27, file.end(), m_mem.begin() + 0x4000);
+	auto file = FileContents(g_resourcePath / filename);
+	if (file.size() != SNA_HEADER_SIZE + SPECTRUM_RAM_SIZE)
+		throw std::runtime_error("sentinel.sna is not a 48K snapshot");
+	std::copy(file.begin() + SNA_HEADER_SIZE, file.end(), m_mem.begin() + SPECTRUM_ROM_SIZE);
 
 	Z80_SP = file[23] + (file[24] << 8);
 	Z80_AF = file[21] + (file[22] << 8);
@@ -331,7 +335,7 @@ void Spectrum::LoadSnapshot(const std::wstring& filename)
 	Z_Z80_STATE_EI(cpu) = Z_Z80_STATE_IFF2(cpu);
 	Z_Z80_STATE_IM(cpu) = (file[25] & 3);
 
-	Z80_PC = m_mem[Z80_SP] + (m_mem[Z80_SP + 1] << 8);
+	Z80_PC = DPeek(Z80_SP);
 	Z80_SP = Z80_SP + 2;
 }
 

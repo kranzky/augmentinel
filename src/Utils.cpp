@@ -73,30 +73,99 @@ std::vector<uint8_t> FileContents(const std::wstring& filename)
 	return file;
 }
 #else
-// Cross-platform FileContents implementation
-std::vector<uint8_t> FileContents(const std::wstring& filename)
+std::vector<uint8_t> FileContents(const fs::path& path)
 {
-	// Convert wstring to string
-	fs::path filepath(filename);
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
+        throw std::runtime_error("File not found: " + path.u8string());
 
-	// Try opening relative to current directory
-	std::ifstream file(filepath, std::ios::binary | std::ios::ate);
-	if (!file.is_open()) {
-		auto str = "File not found: " + to_string(filename);
-		throw std::runtime_error(str);
-	}
-
-	std::streamsize size = file.tellg();
-	file.seekg(0, std::ios::beg);
-
-	std::vector<uint8_t> buffer(size);
-	if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
-		throw std::runtime_error("Failed to read file");
-	}
-
-	return buffer;
+    return { std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>() };
 }
 #endif
+
+std::wstring to_wstring(const std::string& str)
+{
+    std::wstring result;
+    result.reserve(str.size());
+
+    for (size_t i = 0; i < str.size();)
+    {
+        auto c = static_cast<unsigned char>(str[i]);
+        auto length = (c < 0x80) ? 1 : ((c & 0xe0) == 0xc0) ? 2 : ((c & 0xf0) == 0xe0) ? 3 : ((c & 0xf8) == 0xf0) ? 4 : 0;
+        if (!length || i + length > str.size())
+        {
+            result.push_back(L'\ufffd');   // invalid or truncated sequence
+            ++i;
+            continue;
+        }
+
+        uint32_t code_point = (length == 1) ? c : (c & (0x7f >> length));
+        for (auto n = 1; n < length; ++n)
+            code_point = (code_point << 6) | (static_cast<unsigned char>(str[i + n]) & 0x3f);
+        i += length;
+
+        if constexpr (sizeof(wchar_t) == 2)
+        {
+            if (code_point >= 0x10000)
+            {
+                code_point -= 0x10000;
+                result.push_back(static_cast<wchar_t>(0xd800 + (code_point >> 10)));
+                result.push_back(static_cast<wchar_t>(0xdc00 + (code_point & 0x3ff)));
+                continue;
+            }
+        }
+        result.push_back(static_cast<wchar_t>(code_point));
+    }
+
+    return result;
+}
+
+std::string to_string(const std::wstring& wstr)
+{
+    std::string result;
+    result.reserve(wstr.size());
+
+    for (size_t i = 0; i < wstr.size(); ++i)
+    {
+        auto code_point = static_cast<uint32_t>(wstr[i]);
+
+        // Combine UTF-16 surrogate pairs.
+        if (code_point >= 0xd800 && code_point <= 0xdbff && i + 1 < wstr.size())
+        {
+            auto low = static_cast<uint32_t>(wstr[i + 1]);
+            if (low >= 0xdc00 && low <= 0xdfff)
+            {
+                code_point = 0x10000 + ((code_point - 0xd800) << 10) + (low - 0xdc00);
+                ++i;
+            }
+        }
+
+        if (code_point < 0x80)
+        {
+            result.push_back(static_cast<char>(code_point));
+        }
+        else if (code_point < 0x800)
+        {
+            result.push_back(static_cast<char>(0xc0 | (code_point >> 6)));
+            result.push_back(static_cast<char>(0x80 | (code_point & 0x3f)));
+        }
+        else if (code_point < 0x10000)
+        {
+            result.push_back(static_cast<char>(0xe0 | (code_point >> 12)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3f)));
+            result.push_back(static_cast<char>(0x80 | (code_point & 0x3f)));
+        }
+        else
+        {
+            result.push_back(static_cast<char>(0xf0 | (code_point >> 18)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 12) & 0x3f)));
+            result.push_back(static_cast<char>(0x80 | ((code_point >> 6) & 0x3f)));
+            result.push_back(static_cast<char>(0x80 | (code_point & 0x3f)));
+        }
+    }
+
+    return result;
+}
 
 std::mt19937& random_source()
 {

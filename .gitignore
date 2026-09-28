@@ -19,3 +19,8 @@ desktop.ini
 *~
 
 .DS_Store
+
+# Packaging output
+/build-*/
+/dist/
+/release/

@@ -1,0 +1,36 @@
+// Windows resources for Augmentinel.exe, configured by CMake into build/generated/Augmentinel.rc.
+// Resource id 1 is the app's default icon: Windows uses the lowest-numbered ICON for Explorer,
+// the taskbar and shortcuts. The version block is what Explorer shows under Properties > Details,
+// and what signing tools read.
+#include <winver.h>
+
+1 ICON "@AUGMENTINEL_ICON_PATH@"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION    @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+ PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+ FILEFLAGSMASK  VS_FFI_FILEFLAGSMASK
+ FILEFLAGS      0
+ FILEOS         VOS_NT_WINDOWS32
+ FILETYPE       VFT_APP
+ FILESUBTYPE    VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "Jason Hutchens"
+            VALUE "FileDescription",  "Augmentinel"
+            VALUE "FileVersion",      "@PROJECT_VERSION@"
+            VALUE "InternalName",     "Augmentinel"
+            VALUE "LegalCopyright",   "Copyright (C) 2022 Simon Owen, 2025-2026 Jason Hutchens. GPL v3."
+            VALUE "OriginalFilename", "Augmentinel.exe"
+            VALUE "ProductName",      "Augmentinel"
+            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

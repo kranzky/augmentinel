@@ -1,341 +1,212 @@
 #include "Platform.h"
 #include "Application.h"
-#include "OpenGLRenderer.h"
+#include "Audio.h"
 #include "Augmentinel.h"
+#include "DebugOverlay.h"
+#include "OpenGLRenderer.h"
 #include "Settings.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-static constexpr float MAX_ACCUMULATED_TIME = 0.25f;
+constexpr auto DEFAULT_WINDOW_WIDTH = 1600;
+constexpr auto DEFAULT_WINDOW_HEIGHT = 900;
+constexpr auto MAX_ACCUMULATED_TIME = 0.25f;  // longest frame time the game sees, in seconds
 
-// Global resource path
-std::string g_resourcePath;
+static constexpr auto FULLSCREEN_KEY{ L"Fullscreen" };
+static constexpr auto SOUND_PACK_KEY{ L"SoundPack" };
 
-Application::Application()
-{
-}
+fs::path g_resourcePath;
+
+Application::Application() = default;
 
 Application::~Application()
 {
-    Shutdown();
+    // Everything holding GL objects must go before the context does.
+    m_pGame.reset();
+    m_pDebugOverlay.reset();
+    m_pRenderer.reset();
+    m_pAudio.reset();
+
+    if (m_glContext)
+        SDL_GL_DeleteContext(m_glContext);
+    if (m_window)
+        SDL_DestroyWindow(m_window);
+
+    SDL_Quit();
+}
+
+// Resources are found beside the executable, or in Contents/Resources of a macOS app
+// bundle. Settings live in the per-user app data folder, so they survive updates and
+// work when the app folder is read-only (and never modify a signed bundle).
+void Application::InitPaths()
+{
+    fs::path base_path = fs::current_path();
+    if (auto base = SDL_GetBasePath())
+    {
+        base_path = fs::u8path(base);
+        SDL_free(base);
+    }
+
+    auto bundle_resources = (base_path / ".." / "Resources").lexically_normal();
+    g_resourcePath = fs::exists(bundle_resources / "48.rom") ? bundle_resources : base_path;
+
+    fs::path settings_dir = base_path;
+    if (auto pref = SDL_GetPrefPath("", APP_NAME))
+    {
+        settings_dir = fs::u8path(pref);
+        SDL_free(pref);
+    }
+    auto settings_path = settings_dir / "settings.ini";
+
+    // Adopt settings from earlier versions: beside the executable (1.6.x), or the
+    // original Windows release's AppData\Augmentinel.ini.
+    std::error_code ec;
+    if (!fs::exists(settings_path, ec))
+    {
+        for (auto& old_path : { base_path / "settings.ini", settings_dir.parent_path().parent_path() / "Augmentinel.ini" })
+        {
+            if (fs::exists(old_path, ec) && fs::copy_file(old_path, settings_path, ec))
+            {
+                SDL_Log("Imported settings from %s", old_path.u8string().c_str());
+                break;
+            }
+        }
+    }
+
+    InitSettings(settings_path);
 }
 
 bool Application::Init()
 {
-    // Initialize SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) < 0)
     {
-        SDL_Log("SDL initialization failed: %s", SDL_GetError());
+        SDL_Log("SDL initialisation failed: %s", SDL_GetError());
         return false;
     }
 
-    // Request OpenGL 3.3 Core Profile
+    InitPaths();
+
+    // Anti-aliasing is done by the renderer's own framebuffer, so the window's
+    // framebuffer needs no multisampling, depth or stencil.
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
 
-    // Mouse.
     SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SCALING, "1");
 
-    // MSAA
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
-
-    // Create window
-    m_window = SDL_CreateWindow(
-        APP_NAME " " APP_VERSION,
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        m_windowWidth,
-        m_windowHeight,
-        SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
-
+    m_window = SDL_CreateWindow(APP_NAME " v" APP_VERSION,
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!m_window)
     {
         SDL_Log("Window creation failed: %s", SDL_GetError());
         return false;
     }
 
-    // Create OpenGL context
     m_glContext = SDL_GL_CreateContext(m_window);
-    if (!m_glContext)
+    if (!m_glContext || !LoadGL())
     {
-        SDL_Log("OpenGL context creation failed: %s", SDL_GetError());
+        SDL_Log("OpenGL 3.3 is required: %s", SDL_GetError());
         return false;
     }
 
-#ifndef PLATFORM_MACOS
-    // Initialize GLEW on Windows/Linux (macOS doesn't need it)
-    glewExperimental = GL_TRUE;
-    GLenum glewErr = glewInit();
-    if (glewErr != GLEW_OK)
-    {
-        SDL_Log("GLEW initialization failed: %s", glewGetErrorString(glewErr));
-        return false;
-    }
-    SDL_Log("GLEW initialized: %s", glewGetString(GLEW_VERSION));
-#endif
-
-    // Enable VSync
     SDL_GL_SetSwapInterval(1);
+    SDL_Log("OpenGL %s, GLSL %s, %s", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION), glGetString(GL_RENDERER));
 
-    // Log OpenGL info
-    SDL_Log("OpenGL Version: %s", glGetString(GL_VERSION));
-    SDL_Log("GLSL Version: %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-    SDL_Log("Renderer: %s", glGetString(GL_RENDERER));
-    SDL_Log("Vendor: %s", glGetString(GL_VENDOR));
-
-    // Set resource and settings paths
-    char* basePath = SDL_GetBasePath();
-    if (basePath) {
-        std::string base(basePath);
-        SDL_free(basePath);
-
-#ifdef PLATFORM_MACOS
-        // Check if we're in an app bundle (path ends with .app/Contents/MacOS/)
-        if (base.find(".app/Contents/MacOS/") != std::string::npos) {
-            // Resources are in ../Resources/ relative to executable
-            g_resourcePath = base + "../Resources/";
-            // Settings stay alongside executable for easy access
-            settings_path = std::wstring(base.begin(), base.end()) + L"settings.ini";
-        } else {
-            g_resourcePath = base;
-            settings_path = std::wstring(base.begin(), base.end()) + L"settings.ini";
-        }
-#else
-        g_resourcePath = base;
-        settings_path = std::wstring(base.begin(), base.end()) + L"settings.ini";
-#endif
-    } else {
-        g_resourcePath = "./";
-        settings_path = L"settings.ini";
-    }
-    SDL_Log("Resource path: %s", g_resourcePath.c_str());
-
-    // Initialize settings
-    InitSettings(APP_NAME);
-
-    // Restore fullscreen state from settings
-    m_fullscreen = GetFlag(L"Fullscreen", false);
+    m_fullscreen = GetFlag(FULLSCREEN_KEY, false);
     if (m_fullscreen)
-    {
-        m_windowedWidth = m_windowWidth;
-        m_windowedHeight = m_windowHeight;
         SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-        // Ensure window has input focus after going fullscreen
-        SDL_RaiseWindow(m_window);
-        SDL_SetWindowInputFocus(m_window);
-        SDL_Log("Restored fullscreen mode from settings");
-    }
 
-    // Create renderer
-    auto pOpenGLRenderer = std::make_shared<OpenGLRenderer>(m_windowWidth, m_windowHeight);
-    if (!pOpenGLRenderer->Init())
+    SDL_GL_GetDrawableSize(m_window, &m_drawableWidth, &m_drawableHeight);
+    m_pRenderer = std::make_shared<OpenGLRenderer>();
+    if (!m_pRenderer->Init(m_drawableWidth, m_drawableHeight))
     {
-        SDL_Log("Renderer initialization failed");
+        SDL_Log("Renderer initialisation failed");
         return false;
     }
-    m_pRenderer = pOpenGLRenderer;
 
-    // Create audio
     m_pAudio = std::make_shared<Audio>();
+    m_pAudio->SetSoundPack(Audio::SoundPackFromName(to_string(GetSetting(SOUND_PACK_KEY, std::wstring{}))));
 
-    // Restore sound pack from settings (stored as pack name string)
-    std::wstring savedPackName = GetSetting(L"SoundPack", std::wstring(L"Commodore Amiga"));
-    SoundPack savedPack = SoundPack::Amiga;
-    if (savedPackName == L"Commodore 64") savedPack = SoundPack::C64;
-    else if (savedPackName == L"BBC Micro") savedPack = SoundPack::BBC;
-    else if (savedPackName == L"Sinclair ZX Spectrum") savedPack = SoundPack::Spectrum;
-    m_pAudio->SetSoundPack(savedPack);
+    std::shared_ptr<View> pView = m_pRenderer;
+    m_pGame = std::make_unique<Augmentinel>(pView, m_pAudio);
 
-    // Create game
-    m_pGame = std::make_unique<Augmentinel>(m_pRenderer, m_pAudio);
-
-    // Create debug overlay
     m_pDebugOverlay = std::make_unique<DebugOverlay>();
-    if (!m_pDebugOverlay->Init(m_windowWidth, m_windowHeight))
+    if (!m_pDebugOverlay->Init(g_resourcePath / "48.rom"))
     {
-        SDL_Log("WARNING: DebugOverlay init failed, debug overlay will be disabled");
+        SDL_Log("Debug overlay unavailable");
         m_pDebugOverlay.reset();
     }
 
-    // Enable relative mouse mode for free look
+    // Take keyboard focus, which a window made fullscreen at startup may not get.
+    SDL_RaiseWindow(m_window);
+    SDL_SetWindowInputFocus(m_window);
     SDL_SetRelativeMouseMode(SDL_TRUE);
+    return true;
+}
+
+bool Application::Run(const Script& script)
+{
+    auto scripted = !script.screenshot_path.empty();
+    m_showDebugInfo = scripted;
+
+    auto last_time = std::chrono::steady_clock::now();
+    m_fpsLastTicks = SDL_GetTicks();
+
+    for (int frame = 1; m_running; ++frame)
+    {
+        // Scripted taps deliver press and release together, like a quick click.
+        for (auto& [press_frame, key] : script.presses)
+        {
+            if (press_frame == frame)
+            {
+                for (auto type : { SDL_KEYDOWN, SDL_KEYUP })
+                {
+                    SDL_Event event{};
+                    event.key.type = type;
+                    event.key.state = (type == SDL_KEYDOWN) ? SDL_PRESSED : SDL_RELEASED;
+                    event.key.keysym.sym = key;
+                    SDL_PushEvent(&event);
+                }
+            }
+        }
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+            ProcessEvent(event);
+
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::min(std::chrono::duration<float>(now - last_time).count(), MAX_ACCUMULATED_TIME);
+        last_time = now;
+
+        m_pGame->Frame(elapsed);
+        m_pRenderer->EndInputFrame();
+        if (!m_running || m_pGame->WantsToQuit())
+            break;
+
+        m_pRenderer->BeginScene();
+        m_pRenderer->Render(m_pGame.get());
+        m_pRenderer->EndScene();
+
+        UpdateDebugOverlay(elapsed);
+        if (m_showDebugInfo && m_pDebugOverlay)
+            m_pDebugOverlay->Render(m_drawableWidth, m_drawableHeight);
+
+        // Capture from the back buffer, before it's presented.
+        if (scripted && frame >= script.frames)
+            return SaveScreenshot(script.screenshot_path);
+
+        SDL_GL_SwapWindow(m_window);
+    }
 
     return true;
 }
 
-void Application::Run(bool dumpScreenshot)
-{
-    auto lastTime = std::chrono::high_resolution_clock::now();
-    int warmupFrames = dumpScreenshot ? 10 : 0; // Wait 10 frames before screenshot
-
-    // Enable debug info by default when taking screenshots
-    m_showDebugInfo = dumpScreenshot;
-    m_fpsLastTime = SDL_GetTicks();
-
-    while (m_running)
-    {
-        // Process events
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
-            ProcessEvent(event);
-        }
-
-        if (!m_running)
-            break;
-
-        // Calculate delta time
-        auto currentTime = std::chrono::high_resolution_clock::now();
-        float elapsed = std::chrono::duration<float>(currentTime - lastTime).count();
-        elapsed = std::min(elapsed, MAX_ACCUMULATED_TIME);
-        lastTime = currentTime;
-
-        // Update FPS counter
-        m_frameCount++;
-        m_fpsFrameCount++;
-        m_avgFrameTime = elapsed * 1000.0f; // Convert to milliseconds
-
-        uint32_t currentTicks = SDL_GetTicks();
-        if (currentTicks - m_fpsLastTime >= 1000)
-        { // Update FPS every second
-            m_currentFPS = m_fpsFrameCount * 1000.0f / (currentTicks - m_fpsLastTime);
-            m_fpsFrameCount = 0;
-            m_fpsLastTime = currentTicks;
-        }
-
-        // Update debug overlay every frame if enabled
-        if (m_showDebugInfo && m_pDebugOverlay && m_pRenderer)
-        {
-            auto *glRenderer = dynamic_cast<OpenGLRenderer *>(m_pRenderer.get());
-
-            std::vector<std::string> debugLines;
-            char buffer[256];
-
-            snprintf(buffer, sizeof(buffer), "FPS: %.1f", m_currentFPS);
-            debugLines.push_back(buffer);
-
-            snprintf(buffer, sizeof(buffer), "Frame Time: %.2f ms", m_avgFrameTime);
-            debugLines.push_back(buffer);
-
-            snprintf(buffer, sizeof(buffer), "Total Frames: %u", m_frameCount);
-            debugLines.push_back(buffer);
-
-            if (glRenderer)
-            {
-                snprintf(buffer, sizeof(buffer), "Draw Calls: %u", glRenderer->GetDrawCallCount());
-                debugLines.push_back(buffer);
-
-                snprintf(buffer, sizeof(buffer), "Uploaded Models: %u", glRenderer->GetModelCount());
-                debugLines.push_back(buffer);
-            }
-
-            m_pDebugOverlay->SetText(debugLines);
-        }
-
-        // Update game
-        if (m_pGame)
-        {
-            m_pGame->Frame(elapsed);
-
-            // Check if game wants to quit (e.g., from title screen)
-            if (m_pGame->WantsToQuit())
-            {
-                m_running = false;
-                break;
-            }
-        }
-
-        // Process key edges (convert DownEdge->Down, UpEdge->Up)
-        if (m_pRenderer)
-        {
-            m_pRenderer->ProcessKeyEdges();
-        }
-
-        // Render
-        if (m_pRenderer)
-        {
-            m_pRenderer->BeginScene();
-            if (m_pGame)
-            {
-                m_pRenderer->Render(m_pGame.get());
-            }
-            m_pRenderer->EndScene();
-        }
-
-        // Render debug overlay on top of everything
-        if (m_showDebugInfo && m_pDebugOverlay)
-        {
-            m_pDebugOverlay->Render();
-        }
-
-        // Dump screenshot BEFORE swap if requested (to capture back buffer)
-        if (dumpScreenshot && warmupFrames > 0)
-        {
-            warmupFrames--;
-        }
-        if (dumpScreenshot && warmupFrames == 0)
-        {
-            // Display final performance stats before screenshot
-            if (m_showDebugInfo && m_pRenderer)
-            {
-                auto *glRenderer = dynamic_cast<OpenGLRenderer *>(m_pRenderer.get());
-                SDL_Log("=== Final Performance Stats ===");
-                SDL_Log("  Total Frames: %u", m_frameCount);
-                SDL_Log("  Avg Frame Time: %.2f ms", m_avgFrameTime);
-                if (glRenderer)
-                {
-                    SDL_Log("  Draw Calls (last frame): %u", glRenderer->GetDrawCallCount());
-                    SDL_Log("  Uploaded Models: %u", glRenderer->GetModelCount());
-                }
-                SDL_Log("===============================");
-            }
-
-            SDL_Log("Capturing screenshot...");
-
-            // Allocate buffer for screenshot (RGB, no alpha)
-            int width = m_windowWidth;
-            int height = m_windowHeight;
-            std::vector<uint8_t> pixels(width * height * 3);
-
-            // Read pixels from back buffer (where we just rendered)
-            glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-
-            // Flip image vertically (OpenGL has origin at bottom-left, image formats at top-left)
-            std::vector<uint8_t> flipped(width * height * 3);
-            for (int y = 0; y < height; y++)
-            {
-                memcpy(&flipped[y * width * 3], &pixels[(height - 1 - y) * width * 3], width * 3);
-            }
-
-            // Save as PNG
-            const char *filename = "screenshot.png";
-            if (stbi_write_png(filename, width, height, 3, flipped.data(), width * 3))
-            {
-                SDL_Log("Screenshot saved: %s (%dx%d)", filename, width, height);
-            }
-            else
-            {
-                SDL_Log("ERROR: Failed to save screenshot");
-            }
-
-            // Exit
-            m_running = false;
-            break;
-        }
-
-        // Swap buffers (after screenshot if needed)
-        SDL_GL_SwapWindow(m_window);
-    }
-}
-
-void Application::ProcessEvent(const SDL_Event &event)
+void Application::ProcessEvent(const SDL_Event& event)
 {
     switch (event.type)
     {
@@ -344,157 +215,120 @@ void Application::ProcessEvent(const SDL_Event &event)
         break;
 
     case SDL_KEYDOWN:
-        ProcessKeyEvent(event.key, true);
-        break;
-
     case SDL_KEYUP:
-        ProcessKeyEvent(event.key, false);
+        ProcessKeyEvent(event.key);
         break;
 
     case SDL_MOUSEBUTTONDOWN:
-        ProcessMouseButton(event.button, true);
-        break;
-
     case SDL_MOUSEBUTTONUP:
-        ProcessMouseButton(event.button, false);
+        m_pRenderer->UpdateKey(VK_MOUSE_BASE + event.button.button,
+            (event.type == SDL_MOUSEBUTTONDOWN) ? KeyState::DownEdge : KeyState::UpEdge);
         break;
 
     case SDL_MOUSEMOTION:
-        if (m_pRenderer)
-        {
-            m_pRenderer->MouseMove(event.motion.xrel, event.motion.yrel);
-        }
+        m_pRenderer->MouseMove(event.motion.xrel, event.motion.yrel);
         break;
 
     case SDL_WINDOWEVENT:
         if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
-        {
-            m_windowWidth = event.window.data1;
-            m_windowHeight = event.window.data2;
-            if (m_pRenderer)
-            {
-                m_pRenderer->OnResize(m_windowWidth, m_windowHeight);
-            }
-            if (m_pDebugOverlay)
-            {
-                m_pDebugOverlay->OnResize(m_windowWidth, m_windowHeight);
-            }
-        }
+            OnResize();
+        else if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+            m_pRenderer->ReleaseKeys();  // key releases while unfocused are never seen
         break;
     }
 }
 
-void Application::ProcessKeyEvent(const SDL_KeyboardEvent &key, bool pressed)
+void Application::ProcessKeyEvent(const SDL_KeyboardEvent& key)
 {
-    // Ignore key repeat events - we only want the initial press
-    // Key state will remain "Down" until released, which is what we want for movement
-    // Action keys (ESC, TAB) check for DownEdge and will only trigger once
+    // Held keys are tracked by state, so auto-repeat events are ignored.
     if (key.repeat)
-    {
         return;
-    }
 
-    // Special case: TAB to toggle debug info
-    if (key.keysym.sym == SDLK_TAB && pressed)
-    {
-        m_showDebugInfo = !m_showDebugInfo;
-        return;
-    }
+    auto pressed = (key.state == SDL_PRESSED);
+    auto sym = key.keysym.sym;
 
-    // Special case: F11 or ALT+Enter to toggle fullscreen
-    bool isFullscreenToggle = (key.keysym.sym == SDLK_F11) ||
-                               (key.keysym.sym == SDLK_RETURN && (key.keysym.mod & KMOD_ALT));
-    if (isFullscreenToggle && pressed)
+    if (pressed)
     {
-        m_fullscreen = !m_fullscreen;
-        SetSetting(L"Fullscreen", m_fullscreen);
-        if (m_fullscreen)
+        if (sym == SDLK_TAB)
         {
-            // Store windowed size before going fullscreen
-            m_windowedWidth = m_windowWidth;
-            m_windowedHeight = m_windowHeight;
-            SDL_SetWindowFullscreen(m_window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-            SDL_Log("Fullscreen mode enabled");
+            m_showDebugInfo = !m_showDebugInfo;
+            return;
         }
-        else
-        {
-            SDL_SetWindowFullscreen(m_window, 0);
-            // Restore windowed size
-            SDL_SetWindowSize(m_window, m_windowedWidth, m_windowedHeight);
-            SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-            SDL_Log("Windowed mode enabled");
-        }
-        return;
-    }
 
-    // Special case: Number keys 1-4 to switch sound packs
-    if (pressed && m_pAudio)
-    {
-        SoundPack newPack = m_pAudio->GetSoundPack();
-        switch (key.keysym.sym)
+        if (sym == SDLK_F11 || (sym == SDLK_RETURN && (key.keysym.mod & KMOD_ALT)))
         {
-            case SDLK_1:
-                newPack = SoundPack::Amiga;
-                break;
-            case SDLK_2:
-                newPack = SoundPack::C64;
-                break;
-            case SDLK_3:
-                newPack = SoundPack::BBC;
-                break;
-            case SDLK_4:
-                newPack = SoundPack::Spectrum;
-                break;
-            default:
-                break;
+            ToggleFullscreen();
+            return;
         }
-        if (newPack != m_pAudio->GetSoundPack())
+
+        // 1-4 select the Amiga, C64, BBC or Spectrum sound pack.
+        if (sym >= SDLK_1 && sym <= SDLK_4)
         {
-            m_pAudio->SetSoundPack(newPack);
-            // Save as pack name string (matches how Augmentinel.cpp reads it)
-            SetSetting(L"SoundPack", std::wstring(to_wstring(m_pAudio->GetSoundPackName(newPack))));
+            auto pack = static_cast<SoundPack>(sym - SDLK_1);
+            m_pAudio->SetSoundPack(pack);
+            SetSetting(SOUND_PACK_KEY, to_wstring(Audio::SoundPackName(pack)));
             return;
         }
     }
 
-    // Pass key events to renderer for game input (including ESC)
-    if (m_pRenderer)
-    {
-        // SDL keycodes map directly to VK_ codes via Platform.h
-        int virtKey = key.keysym.sym;
-        m_pRenderer->UpdateKey(virtKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
-    }
+    m_pRenderer->UpdateKey(sym, pressed ? KeyState::DownEdge : KeyState::UpEdge);
 }
 
-void Application::ProcessMouseButton(const SDL_MouseButtonEvent &button, bool pressed)
+void Application::ToggleFullscreen()
 {
-    if (m_pRenderer)
-    {
-        // Map SDL mouse buttons to VK_ codes (offset by 1000 as defined in Platform.h)
-        int virtKey = 1000 + button.button;
-        m_pRenderer->UpdateKey(virtKey, pressed ? KeyState::DownEdge : KeyState::UpEdge);
-    }
+    m_fullscreen = !m_fullscreen;
+    SDL_SetWindowFullscreen(m_window, m_fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    SetSetting(FULLSCREEN_KEY, m_fullscreen);
 }
 
-void Application::Shutdown()
+void Application::OnResize()
 {
-    SDL_Log("Shutting down...");
+    SDL_GL_GetDrawableSize(m_window, &m_drawableWidth, &m_drawableHeight);
+    m_pRenderer->OnResize(m_drawableWidth, m_drawableHeight);
+}
 
-    m_pGame.reset();
-    m_pAudio.reset();
-    m_pRenderer.reset();
+void Application::UpdateDebugOverlay(float elapsed)
+{
+    ++m_frameCount;
+    ++m_fpsFrameCount;
 
-    if (m_glContext)
+    auto ticks = SDL_GetTicks();
+    if (ticks - m_fpsLastTicks >= 1000)
     {
-        SDL_GL_DeleteContext(m_glContext);
-        m_glContext = nullptr;
+        m_fps = m_fpsFrameCount * 1000.0f / (ticks - m_fpsLastTicks);
+        m_fpsFrameCount = 0;
+        m_fpsLastTicks = ticks;
     }
 
-    if (m_window)
+    if (!m_showDebugInfo || !m_pDebugOverlay)
+        return;
+
+    char fps[32], frame_time[32], frames[32], draws[32], meshes[32];
+    snprintf(fps, sizeof(fps), "FPS: %.1f", m_fps);
+    snprintf(frame_time, sizeof(frame_time), "Frame: %.2f ms", elapsed * 1000.0f);
+    snprintf(frames, sizeof(frames), "Frames: %u", m_frameCount);
+    snprintf(draws, sizeof(draws), "Draws: %u", m_pRenderer->GetDrawCallCount());
+    snprintf(meshes, sizeof(meshes), "Meshes: %zu", m_pRenderer->GetMeshCount());
+    m_pDebugOverlay->SetText({ fps, frame_time, frames, draws, meshes });
+}
+
+bool Application::SaveScreenshot(const fs::path& path) const
+{
+    auto width = m_drawableWidth, height = m_drawableHeight;
+    auto stride = width * 3;
+    std::vector<uint8_t> pixels(static_cast<size_t>(stride) * height);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+
+    // OpenGL rows run bottom-up; PNG rows run top-down.
+    stbi_flip_vertically_on_write(1);
+    if (!stbi_write_png(path.u8string().c_str(), width, height, 3, pixels.data(), stride))
     {
-        SDL_DestroyWindow(m_window);
-        m_window = nullptr;
+        SDL_Log("Failed to save screenshot %s", path.u8string().c_str());
+        return false;
     }
 
-    SDL_Quit();
+    SDL_Log("Saved screenshot %s (%dx%d, %u draw calls)", path.u8string().c_str(), width, height, m_pRenderer->GetDrawCallCount());
+    return true;
 }
